@@ -1,0 +1,8 @@
+model/
+outputs/
+/data/
+cache/
+.cursor/
+.DS_Store
+__pycache__/
+*.tar.xz

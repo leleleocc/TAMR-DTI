@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage{tamr_dti,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{placeins}
+\usepackage{xcolor}
+\hypersetup{hidelinks}
+
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{8pt plus 2pt minus 2pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+
+\title{TAMR-DTI: Target-Aware Modulation and Mamba-based Representation Refinement for Drug-Target Interaction Prediction}
+
+% Keep authors anonymous for submission.
+\author{Anonymous Authors}
+
+\newcommand{\best}[1]{\textbf{#1}}
+%\iclrfinalcopy
+\begin{document}
+
+\maketitle
+
+\input{sec/abstract}
+\input{sec/introduction}
+\input{sec/related_work}
+\input{sec/methodology}
+\input{sec/experiments}
+\input{sec/discussion}
+\input{sec/conclusion}
+
+\bibliography{tamr_dti}
+\bibliographystyle{tamr_dti}
+
+\end{document}

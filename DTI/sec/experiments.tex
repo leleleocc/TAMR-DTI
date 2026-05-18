@@ -1,0 +1,266 @@
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Experimental Setup}
+
+This section describes the datasets, evaluation metrics, and implementation settings used for the main TAMR-DTI experiments. All main results use the full eight-conformer TAMR-DTI model and five fixed random seeds, $\{42,43,44,45,47\}$. For every run, the best checkpoint is selected by validation AUROC, the classification threshold is selected only on the validation split, and the selected checkpoint and threshold are then evaluated on the held-out test split. This protocol keeps threshold-dependent metrics separate from model selection and avoids using test-set information for checkpoint choice.
+
+\subsubsection{Datasets and Data Distribution}
+
+We evaluate on four benchmark DTI datasets: BindingDB, BioSNAP, Human, and C. elegans. Each sample consists of a drug SMILES string, a protein sequence, and a binary interaction label. BindingDB is the largest dataset and contains the most diverse drug and protein sets. BioSNAP is medium-sized and nearly class-balanced. Human is the smallest dataset and has a stronger negative-label skew. C. elegans is also near-balanced, but its interaction set is smaller than BindingDB and BioSNAP. Table~\ref{tab:dataset_overview} summarizes the dataset-level statistics used in our local splits.
+
+\begin{table}[!htbp]
+\caption{Dataset statistics used in the main experiments.}
+\label{tab:dataset_overview}
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+Dataset & Drugs & Proteins & Interactions & Positive & Negative & Positive rate \\
+\midrule
+BindingDB & 14,643 & 2,623 & 49,199 & 20,674 & 28,525 & 42.02\% \\
+BioSNAP & 4,505 & 2,181 & 27,464 & 13,830 & 13,634 & 50.36\% \\
+Human & 2,726 & 2,001 & 5,997 & 2,633 & 3,364 & 43.91\% \\
+C. elegans & 1,767 & 1,876 & 7,786 & 3,893 & 3,893 & 50.00\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+For the main experiments, each dataset is split into training, validation, and test sets under a fixed random split. The training set is used for optimization, the validation set is used for checkpoint and threshold selection, and the test set is used only for final reporting. Table~\ref{tab:data_split} reports the label distribution of each split. The split-level distribution is important because AUROC/AUPRC are threshold-independent, whereas Accuracy and F1 are affected by the validation-selected threshold and by the positive-label rate in the test set.
+
+\begin{table}[!htbp]
+\caption{Train/validation/test split distribution for the main experiments.}
+\label{tab:data_split}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Split & Samples & Positive & Negative & Positive rate \\
+\midrule
+BindingDB & Train & 34,439 & 14,583 & 19,856 & 42.34\% \\
+BindingDB & Validation & 4,920 & 2,017 & 2,903 & 41.00\% \\
+BindingDB & Test & 9,840 & 4,074 & 5,766 & 41.40\% \\
+BioSNAP & Train & 19,224 & 9,684 & 9,540 & 50.37\% \\
+BioSNAP & Validation & 2,747 & 1,398 & 1,349 & 50.89\% \\
+BioSNAP & Test & 5,493 & 2,748 & 2,745 & 50.03\% \\
+Human & Train & 4,197 & 1,846 & 2,351 & 43.98\% \\
+Human & Validation & 600 & 251 & 349 & 41.83\% \\
+Human & Test & 1,200 & 536 & 664 & 44.67\% \\
+C. elegans & Train & 5,450 & 2,727 & 2,723 & 50.04\% \\
+C. elegans & Validation & 778 & 405 & 373 & 52.06\% \\
+C. elegans & Test & 1,558 & 761 & 797 & 48.84\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsubsection{Evaluation Metrics}
+
+We report AUROC, AUPRC, Accuracy, and F1. AUROC and AUPRC evaluate ranking quality across decision thresholds, while Accuracy and F1 evaluate thresholded binary decisions. Table~\ref{tab:evaluation_metrics} summarizes the role of each metric. During evaluation, the decision threshold is selected on the validation set and then applied unchanged to the test set. For TAMR-DTI, we report mean $\pm$ standard deviation across five repeated runs. We also report 95\% confidence intervals computed as $\bar{x} \pm t_{0.975,4}s/\sqrt{5}$, with $t_{0.975,4}=2.776$. Because the reported baselines do not provide per-seed predictions, we do not compute p-values against those baselines.
+
+\begin{table}[!htbp]
+\caption{Evaluation metrics used in the experiments.}
+\label{tab:evaluation_metrics}
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.39\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}}
+\toprule
+Metric & Definition & Interpretation \\
+\midrule
+AUROC & Area under the receiver operating characteristic curve. & Measures positive-negative ranking quality across all thresholds. \\
+AUPRC & Area under the precision-recall curve. & Focuses on positive-class retrieval and is informative when label balance differs across datasets. \\
+Accuracy & $(TP+TN)/(TP+TN+FP+FN)$. & Measures overall thresholded classification correctness. \\
+F1 & $2\,TP/(2\,TP+FP+FN)$. & Harmonic summary of precision and recall for the positive class. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsubsection{Experimental Configuration}
+\label{sec:implementation_details}
+
+The architecture of TAMR-DTI is described in Section~\ref{sec:methodology}; this subsection reports only the training, optimization, and evaluation hyperparameters used in the main experiments. Table~\ref{tab:training_hyperparameters} lists the shared training settings. All datasets use the same optimizer, scheduler, checkpoint-selection rule, and validation-only threshold-selection protocol. The classification threshold is searched on the validation set over a fixed grid from 0.01 to 0.99 and then applied unchanged to the test set.
+
+\begin{table}[!htbp]
+\caption{Training and evaluation hyperparameters for the main experiments.}
+\label{tab:training_hyperparameters}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.29\linewidth}>{\raggedright\arraybackslash}p{0.60\linewidth}}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Data split & Fixed random train/validation/test split; split sizes and label ratios are reported in Table~\ref{tab:data_split} \\
+Optimizer & Adam with PyTorch default momentum parameters $(\beta_1=0.9,\beta_2=0.999,\epsilon=10^{-8})$ \\
+Training objective & Binary cross-entropy with logits; positive-class weighting computed from the training split \\
+Initial learning rate & $1\times10^{-4}$ \\
+Weight decay & $1\times10^{-4}$ \\
+Maximum epochs & 100 \\
+Micro-batch size & 16 per GPU \\
+Gradient accumulation & 4 steps \\
+Distributed training & DeepSpeed ZeRO-2; 8 GPUs in the main launch configuration \\
+DeepSpeed details & Contiguous gradients, communication overlap, reduce-scatter, and all-gather partitioning enabled; all-gather and reduce bucket sizes set to $2\times10^8$ \\
+Effective batch size & 512 drug-target pairs when using 8 GPUs \\
+Gradient clipping & 1.0 \\
+Mixed precision & Disabled in the reported runs \\
+Auxiliary loss weights & Counterfactual key loss $=0.0$, counterfactual stable loss $=0.0$, and field-entropy loss $=0.0$ \\
+Data-loader workers & 8 per process \\
+Learning-rate scheduler & Plateau scheduler \\
+Learning-rate decay factor & 0.5 \\
+Scheduler patience & 5 validation epochs without sufficient improvement \\
+Minimum learning rate & $1\times10^{-6}$ \\
+Checkpoint-selection metric & Validation AUROC \\
+Minimum improvement for checkpoint update & $1\times10^{-4}$ \\
+Early-stopping patience & 10 validation epochs without sufficient improvement \\
+Threshold search grid & $\{0.01,0.02,\ldots,0.99\}$ on the validation split \\
+Threshold-selection metric & Validation Accuracy for the main AUROC-selected runs \\
+Reported seeds & 42, 43, 44, 45, and 47 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+The positive-class weight is computed separately for each dataset as the ratio of negative to positive training samples. Table~\ref{tab:dataset_pos_weight} reports the resulting values. This setting reduces the effect of class imbalance on BindingDB and Human while leaving the near-balanced BioSNAP and C. elegans datasets almost unchanged.
+
+\begin{table}[!htbp]
+\caption{Dataset-specific positive-class weights used by the binary cross-entropy loss.}
+\label{tab:dataset_pos_weight}
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Dataset & Training positives & Training negatives & Positive-class weight \\
+\midrule
+BindingDB & 14,583 & 19,856 & 1.3616 \\
+BioSNAP & 9,684 & 9,540 & 0.9851 \\
+Human & 1,846 & 2,351 & 1.2736 \\
+C. elegans & 2,727 & 2,723 & 0.9985 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Baseline Methods}
+
+We compare TAMR-DTI with the reported multimodal reference model and ten representative baselines that cover classical machine learning, graph neural networks, attention-based DTI models, and Transformer-style interaction models. The baseline scores are adopted from the prior reported comparison under the same four benchmark datasets, while TAMR-DTI is evaluated with our five-seed protocol. Table~\ref{tab:baseline_sources} summarizes the source and modeling idea of each baseline.
+
+\begin{table}[!htbp]
+\caption{Baseline methods included in the main comparison.}
+\label{tab:baseline_sources}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.15\linewidth}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.55\linewidth}}
+\toprule
+Method & Category & Baseline description \\
+\midrule
+SVM \citep{cortes1995svm} & Classical ML & A maximum-margin classifier that separates drug-target feature vectors with a high-dimensional decision boundary. \\
+RF \citep{breiman2001random} & Classical ML & An ensemble of decision trees trained on bootstrapped samples and feature subsets; the reported comparison uses 100 trees. \\
+KNN \citep{guo2003knn} & Classical ML & A distance-based classifier that predicts a query pair from nearby training examples; the reported setting uses $k=5$. \\
+LR \citep{friedman2000logistic} & Classical ML & A linear probabilistic classifier that maps weighted input features to interaction probability through a sigmoid function. \\
+GraphDTA \citep{nguyen2021graphdta} & Graph neural network & Encodes molecular graphs with graph neural networks and protein sequences with CNNs before fully connected prediction. \\
+DrugBAN \citep{bai2023drugban} & Attention/domain adaptation & Uses bilinear attention for drug-target matching and domain adaptation to improve transfer across data distributions. \\
+IIFDTI \citep{cheng2022iifdti} & Attention-based DTI & Separates interactive and independent features with attention mechanisms before DTI prediction. \\
+TransformerCPI \citep{chen2020transformercpi} & Transformer-based DTI & Applies sequence-based self-attention to compound-protein interaction prediction and uses label-reversal experiments for validation. \\
+MolTrans \citep{huang2021moltrans} & Transformer-based DTI & Extracts drug and protein substructure tokens and models high-order substructure interactions with Transformer and CNN modules. \\
+BINDTI \citep{peng2024bindti} & Bidirectional attention & Combines GCN-based drug graph encoding, ACmix-based protein encoding, and bidirectional multi-head interaction attention. \\
+LDM-DTI \citep{ji2026ldmdti} & Multimodal reference & Integrates pretrained drug/protein features, GCN topology encoding, EGNN geometry encoding, protein local-context encoding, and BiIntention fusion. \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+The classical machine-learning baselines provide non-neural reference points. SVM reports AUROC/AUPRC values of 0.904/0.865 on BindingDB, 0.819/0.839 on BioSNAP, 0.913/0.905 on Human, and 0.925/0.907 on C. elegans. RF is the strongest classical baseline overall, reaching 0.942/0.923 on BindingDB, 0.857/0.872 on BioSNAP, 0.939/0.927 on Human, and 0.935/0.931 on C. elegans. KNN reports 0.895/0.865, 0.842/0.805, 0.915/0.902, and 0.912/0.896 on the four datasets, while LR reports 0.916/0.884, 0.821/0.796, 0.895/0.862, and 0.892/0.883. These four baselines show that tree ensembles remain a strong non-deep reference, but they do not match the stronger neural interaction models.
+
+The neural baselines cover different representation and interaction strategies. GraphDTA reaches 0.944/0.925 on BindingDB and 0.871/0.870 on BioSNAP, then rises to 0.965/0.955 on Human and 0.959/0.951 on C. elegans. DrugBAN is particularly strong on Human and C. elegans, with AUROC/AUPRC of 0.979/0.969 and 0.981/0.978, respectively, while also giving strong BindingDB and BioSNAP results. IIFDTI is less competitive on BindingDB and BioSNAP but performs well on Human and C. elegans, especially on C. elegans where it reaches 0.984/0.979. TransformerCPI is weaker on BindingDB and BioSNAP than the graph-attention baselines, whereas MolTrans is strong on the two smaller organism-specific datasets, reaching 0.979/0.975 on Human and 0.982/0.979 on C. elegans. BINDTI is one of the strongest attention-based references, reaching 0.956/0.942 on BindingDB, 0.895/0.894 on BioSNAP, 0.980/0.975 on Human, and 0.985/0.984 on C. elegans.
+
+Table~\ref{tab:baseline_landscape} reports AUROC and AUPRC for all compared methods. On BindingDB, the strongest prior result is 0.960 AUROC and 0.945 AUPRC, followed by BINDTI at 0.956/0.942 and DrugBAN at 0.952/0.936. TAMR-DTI reaches 0.964 AUROC and 0.954 AUPRC, giving the highest ranking metrics on this dataset. On BioSNAP, TAMR-DTI shows the largest improvement, increasing AUROC/AUPRC to 0.930/0.935 compared with 0.908/0.906 for the strongest reported reference. This indicates that target-aware modulation and protein-side refinement are particularly useful on this medium-sized, nearly balanced dataset.
+
+The Human and C. elegans results show different behavior. On Human, TAMR-DTI obtains 0.974 AUROC and 0.971 AUPRC, which is competitive but below the best reported values. This dataset therefore remains the main limitation of the current model. On C. elegans, TAMR-DTI reaches 0.992 AUROC and 0.991 AUPRC, exceeding the best reported prior result of 0.988/0.986. Across all datasets, the comparison supports a dataset-dependent conclusion: TAMR-DTI improves ranking performance on three of the four benchmarks, but does not uniformly dominate every baseline on every dataset. We therefore treat the reported baseline rows as numerical references rather than as paired statistical tests, because their per-seed predictions are not available.
+
+\begin{table}[!htbp]
+\caption{AUROC/AUPRC comparison on four benchmark datasets. Baseline values are adopted from the prior reported comparison; TAMR-DTI values are five-seed mean $\pm$ standard deviation.}
+\label{tab:baseline_landscape}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{2.3pt}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{BindingDB} & \multicolumn{2}{c}{BioSNAP} & \multicolumn{2}{c}{Human} & \multicolumn{2}{c}{C. elegans} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Method & AUROC & AUPRC & AUROC & AUPRC & AUROC & AUPRC & AUROC & AUPRC \\
+\midrule
+SVM & $0.904\pm0.002$ & $0.865\pm0.001$ & $0.819\pm0.045$ & $0.839\pm0.038$ & $0.913\pm0.012$ & $0.905\pm0.001$ & $0.925\pm0.009$ & $0.907\pm0.002$ \\
+RF & $0.942\pm0.001$ & $0.923\pm0.001$ & $0.857\pm0.009$ & $0.872\pm0.006$ & $0.939\pm0.009$ & $0.927\pm0.001$ & $0.935\pm0.009$ & $0.931\pm0.001$ \\
+KNN & $0.895\pm0.001$ & $0.865\pm0.002$ & $0.842\pm0.003$ & $0.805\pm0.003$ & $0.915\pm0.002$ & $0.902\pm0.002$ & $0.912\pm0.003$ & $0.896\pm0.002$ \\
+LR & $0.916\pm0.003$ & $0.884\pm0.002$ & $0.821\pm0.004$ & $0.796\pm0.002$ & $0.895\pm0.003$ & $0.862\pm0.001$ & $0.892\pm0.002$ & $0.883\pm0.003$ \\
+GraphDTA & $0.944\pm0.004$ & $0.925\pm0.006$ & $0.871\pm0.004$ & $0.870\pm0.006$ & $0.965\pm0.003$ & $0.955\pm0.003$ & $0.959\pm0.004$ & $0.951\pm0.002$ \\
+DrugBAN & $0.952\pm0.001$ & $0.936\pm0.001$ & $0.902\pm0.001$ & $0.905\pm0.002$ & $0.979\pm0.001$ & $0.969\pm0.005$ & $0.981\pm0.002$ & $0.978\pm0.002$ \\
+IIFDTI & $0.924\pm0.002$ & $0.901\pm0.004$ & $0.895\pm0.003$ & $0.898\pm0.005$ & $0.977\pm0.003$ & $0.967\pm0.027$ & $0.984\pm0.002$ & $0.979\pm0.002$ \\
+TransformerCPI & $0.895\pm0.002$ & $0.861\pm0.003$ & $0.843\pm0.008$ & $0.859\pm0.007$ & $0.956\pm0.005$ & $0.943\pm0.002$ & $0.975\pm0.003$ & $0.975\pm0.002$ \\
+MolTrans & $0.935\pm0.003$ & $0.901\pm0.004$ & $0.879\pm0.006$ & $0.882\pm0.006$ & $0.979\pm0.003$ & $0.975\pm0.002$ & $0.982\pm0.002$ & $0.979\pm0.002$ \\
+BINDTI & $0.956\pm0.001$ & $0.942\pm0.002$ & $0.895\pm0.003$ & $0.894\pm0.003$ & $0.980\pm0.001$ & $0.975\pm0.004$ & $0.985\pm0.002$ & $0.984\pm0.002$ \\
+LDM-DTI & $0.960\pm0.002$ & $0.945\pm0.002$ & $0.908\pm0.003$ & $0.906\pm0.003$ & \best{$0.981\pm0.001$} & \best{$0.976\pm0.002$} & $0.988\pm0.002$ & $0.986\pm0.002$ \\
+TAMR-DTI & \best{$0.964\pm0.001$} & \best{$0.954\pm0.002$} & \best{$0.930\pm0.002$} & \best{$0.935\pm0.002$} & $0.974\pm0.007$ & $0.971\pm0.009$ & \best{$0.992\pm0.001$} & \best{$0.991\pm0.001$} \\
+\bottomrule
+\end{tabular}}
+\end{center}
+\end{table}
+
+\FloatBarrier
+\subsection{Main Results on Four Benchmark Datasets}
+
+Table~\ref{tab:main_results} reports the full set of test metrics for TAMR-DTI and the reported reference model. TAMR-DTI obtains higher AUROC and AUPRC on BindingDB, BioSNAP, and C. elegans. The gain is most visible on BioSNAP, where AUROC increases from 0.908 to 0.930 and AUPRC increases from 0.906 to 0.935. On BindingDB and C. elegans, the gains are smaller but consistent on the two ranking metrics. Human is the exception: TAMR-DTI reaches 0.974 AUROC and 0.971 AUPRC, below the reported reference values of 0.981 and 0.976. This pattern suggests that the proposed target-aware and protein-refinement components improve ranking performance on most datasets but do not uniformly dominate every benchmark.
+
+\begin{table}[!htbp]
+\caption{Main test results on four datasets. Reference values are reported results from \citet{ji2026ldmdti}; TAMR-DTI values are five-seed mean $\pm$ standard deviation.}
+\label{tab:main_results}
+\begin{center}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Method & AUROC & AUPRC & Acc & F1 \\
+\midrule
+BindingDB & LDM-DTI & $0.960\pm0.002$ & $0.945\pm0.002$ & 0.904 & 0.902 \\
+BindingDB & TAMR-DTI & $0.964\pm0.001$ & $0.954\pm0.002$ & $0.909\pm0.002$ & $0.891\pm0.004$ \\
+BioSNAP & LDM-DTI & $0.908\pm0.003$ & $0.906\pm0.003$ & 0.844 & 0.839 \\
+BioSNAP & TAMR-DTI & $0.930\pm0.002$ & $0.935\pm0.002$ & $0.858\pm0.003$ & $0.858\pm0.004$ \\
+Human & LDM-DTI & $0.981\pm0.001$ & $0.976\pm0.002$ & 0.946 & 0.936 \\
+Human & TAMR-DTI & $0.974\pm0.007$ & $0.971\pm0.009$ & $0.927\pm0.013$ & $0.919\pm0.015$ \\
+C. elegans & LDM-DTI & $0.988\pm0.002$ & $0.986\pm0.002$ & 0.960 & 0.956 \\
+C. elegans & TAMR-DTI & $0.992\pm0.001$ & $0.991\pm0.001$ & $0.960\pm0.008$ & $0.960\pm0.007$ \\
+\bottomrule
+\end{tabular}}
+\end{center}
+\end{table}
+
+The threshold-dependent metrics show a more mixed result. TAMR-DTI improves Accuracy on BindingDB and BioSNAP, and its C. elegans Accuracy is effectively comparable to the reported reference value after rounding. BioSNAP also shows a clear F1 improvement from 0.839 to 0.858, and C. elegans improves from 0.956 to 0.960. However, BindingDB F1 decreases from 0.902 to 0.891 despite improved AUROC/AUPRC, and Human decreases on both Accuracy and F1. These differences indicate that TAMR-DTI primarily strengthens ranking quality, while thresholded classification performance remains sensitive to dataset distribution and validation-threshold selection.
+
+Table~\ref{tab:main_ci} reports confidence intervals for TAMR-DTI. The AUROC intervals are narrow on BindingDB, BioSNAP, and C. elegans, indicating stable ranking behavior across seeds. Human has wider intervals, especially for Accuracy and F1, which is consistent with its smaller test set and the larger seed-to-seed variation observed in the five repeated runs.
+
+\begin{table}[!htbp]
+\caption{95\% confidence intervals for TAMR-DTI over five repeated runs.}
+\label{tab:main_ci}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+Dataset & AUROC & AUPRC & Acc & F1 \\
+\midrule
+BindingDB & [0.963, 0.965] & [0.951, 0.956] & [0.906, 0.912] & [0.886, 0.895] \\
+BioSNAP & [0.927, 0.933] & [0.932, 0.938] & [0.854, 0.862] & [0.853, 0.863] \\
+Human & [0.966, 0.982] & [0.960, 0.983] & [0.911, 0.944] & [0.900, 0.937] \\
+C. elegans & [0.991, 0.993] & [0.989, 0.993] & [0.951, 0.970] & [0.951, 0.969] \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+Overall, the main experiment supports a qualified conclusion. TAMR-DTI is competitive with a strong reported baseline and improves the primary ranking metrics on three of the four datasets, with particularly strong gains on BioSNAP. The Human result prevents a claim of uniform superiority, so the more defensible interpretation is that target-aware conformer aggregation, ligand-conditioned protein encoding, and protein-side Mamba refinement provide dataset-dependent gains over a strong multimodal backbone.
+
+\FloatBarrier
+\subsection{Chapter Summary}
+
+The four-dataset main experiments support a conservative conclusion. TAMR-DTI improves the reported AUROC/AUPRC on BindingDB, BioSNAP, and C. elegans, with the strongest gains on BioSNAP, but it does not improve on Human. The main claim should therefore emphasize dataset-dependent improvement over a strong multimodal backbone rather than universal dominance.

@@ -1,0 +1,13 @@
+\section{Related Work}
+
+\paragraph{Drug-target interaction prediction.}
+Deep DTI models represent drugs using SMILES, molecular graphs, fingerprints, or 3D conformations, and represent proteins using amino-acid sequence encoders or structure-derived features. LDM-DTI \citep{ji2026ldmdti} integrates pretrained language models with GCN and EGNN encoders, then uses a dynamic interaction attention module for cross-modal fusion.
+
+\paragraph{Pretrained biochemical sequence encoders.}
+ChemBERTa \citep{chithrananda2020chemberta} and ProtTrans/ProtBERT \citep{elnaggar2021prottrans} provide high-dimensional sequence representations for molecular SMILES and protein sequences. In our implementation, these pretrained features are retained as the sequence-level semantic backbone.
+
+\paragraph{Geometric and graph molecular modeling.}
+Graph convolutional networks capture molecular topology, while equivariant graph neural networks capture coordinate-sensitive geometry \citep{satorras2021egnn}. TAMR-DTI keeps both topology and geometry branches, and adds target-aware modulation to make conformer aggregation sensitive to the paired protein.
+
+\paragraph{State-space sequence models.}
+Structured state-space models provide an efficient alternative to attention for long sequence modeling \citep{gu2022s4}. Mamba \citep{gu2023mamba} extends this line with selective state spaces and input-dependent sequence mixing. In TAMR-DTI, Mamba is used as a residual refinement module on protein tokens, while BiIntention remains the explicit drug-target matching component.

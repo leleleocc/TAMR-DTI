@@ -1,0 +1,15 @@
+\section{Introduction}
+
+Accurate prediction of drug-target interactions is a core computational task for drug discovery. Modern DTI models increasingly combine pretrained language models, graph neural networks, geometric molecular encoders, and cross-modal attention to represent both small molecules and protein targets. These multimodal designs provide a strong foundation, but they usually encode drug geometry and protein context with limited pair-specific modulation.
+
+This paper studies a narrow but practically important question: can target-aware modulation and sequence-state refinement improve a strong multimodal DTI backbone without removing explicit drug-target matching? We focus on two design choices. First, molecular conformers should not be encoded independently of the target protein. A ligand may expose different relevant geometry depending on the protein context, and protein residues should likewise be encoded under ligand-conditioned context. Second, state-space sequence models such as Mamba \citep{gu2023mamba} may be useful for long protein sequences, but directly replacing cross-modal attention with sequence mixing can remove the pairwise drug-target matching bias that DTI prediction needs.
+
+Our current method therefore makes two conservative modifications. We introduce bidirectional drug-target modulation: protein context participates in drug conformer selection, and ligand context modulates protein token encoding with FiLM-style conditioning. We further insert a protein-only Mamba residual enhancer before BiIntention. This keeps Mamba on the modality where token order is biologically meaningful, while preserving BiIntention for explicit drug-protein interaction modeling.
+
+The current draft makes the following contributions:
+\begin{itemize}
+  \item We formulate a target-aware conformer and ligand-conditioned protein encoding strategy for multimodal DTI prediction.
+  \item We introduce a protein-side Mamba residual refinement module before BiIntention while preserving explicit drug-target matching.
+  \item We provide five-seed main experiments on BindingDB, BioSNAP, Human, and C. elegans, together with confidence intervals for the proposed full model.
+  \item We analyze the dataset-dependent behavior of TAMR-DTI against classical machine learning, graph-based, attention-based, and Transformer-based DTI baselines.
+\end{itemize}
