@@ -1,0 +1,144 @@
+batch_size_per_gpu:
+  desc: ''
+  sort: 7
+  value: 64
+best_metric:
+  desc: ''
+  sort: 16
+  value: auroc
+cache_dir:
+  desc: ''
+  sort: 3
+  value: cache/features_n1/datasets/biosnap/random
+cf_key_weight:
+  desc: ''
+  sort: 29
+  value: 0.0
+cf_stable_weight:
+  desc: ''
+  sort: 30
+  value: 0.0
+cf_start_epoch:
+  desc: ''
+  sort: 28
+  value: 30
+config:
+  desc: ''
+  sort: 2
+  value: configs/experiments/stage2-comparative-conformer-n1-biosnap-seed42.yaml
+dataset:
+  desc: ''
+  sort: 0
+  value: datasets/biosnap
+deepspeed_config:
+  desc: ''
+  sort: 35
+  value: configs/ds_zero2.json
+drug_fusion_gate_bias:
+  desc: ''
+  sort: 20
+  value: -2.0
+early_stop_patience:
+  desc: ''
+  sort: 15
+  value: 10
+field_enhance_gate_bias:
+  desc: ''
+  sort: 22
+  value: -2.0
+field_entropy_weight:
+  desc: ''
+  sort: 31
+  value: 0.0
+fusion_mode:
+  desc: ''
+  sort: 21
+  value: protein_mamba_biintention
+gradient_accumulation_steps:
+  desc: ''
+  sort: 33
+  value: 4
+learning_rate:
+  desc: ''
+  sort: 6
+  value: 0.0001
+lr_decay:
+  desc: ''
+  sort: 12
+  value: 0.5
+lr_patience:
+  desc: ''
+  sort: 13
+  value: 5
+lr_scheduler:
+  desc: ''
+  sort: 11
+  value: plateau
+mamba_enhance_gate_bias:
+  desc: ''
+  sort: 23
+  value: -2.0
+mamba_gate_bounded:
+  desc: ''
+  sort: 27
+  value: false
+mamba_gate_delta_scale:
+  desc: ''
+  sort: 25
+  value: 1.0
+mamba_gate_detach_context:
+  desc: ''
+  sort: 26
+  value: false
+mamba_gate_hidden_dim:
+  desc: ''
+  sort: 24
+  value: 128
+max_epoch:
+  desc: ''
+  sort: 8
+  value: 100
+min_delta:
+  desc: ''
+  sort: 17
+  value: 0.0001
+min_lr:
+  desc: ''
+  sort: 14
+  value: 1.0e-06
+num_workers:
+  desc: ''
+  sort: 9
+  value: 8
+pos_weight:
+  desc: ''
+  sort: 19
+  value: 0.0
+split:
+  desc: ''
+  sort: 1
+  value: random
+swanlab_experiment:
+  desc: ''
+  sort: 4
+  value: stage2-comparative-conformer-n1-biosnap-seed42
+swanlab_log_dir:
+  desc: ''
+  sort: 5
+  value: swanlog/stage2-comparative-conformer-n1-biosnap-seed42
+train_micro_batch_size_per_gpu:
+  desc: ''
+  sort: 34
+  value: 64
+use_pos_weight:
+  desc: ''
+  sort: 18
+  value: true
+weight_decay:
+  desc: ''
+  sort: 10
+  value: 0.0001
+world_size:
+  desc: ''
+  sort: 32
+  value: 8
