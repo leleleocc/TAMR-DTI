@@ -1,7 +1,7 @@
 batch_size_per_gpu:
   desc: ''
   sort: 7
-  value: 64
+  value: 16
 best_metric:
   desc: ''
   sort: 16
@@ -9,7 +9,7 @@ best_metric:
 cache_dir:
   desc: ''
   sort: 3
-  value: cache/features_n1/datasets/biosnap/random
+  value: cache/features/datasets/biosnap/random
 cf_key_weight:
   desc: ''
   sort: 29
@@ -25,7 +25,7 @@ cf_start_epoch:
 config:
   desc: ''
   sort: 2
-  value: configs/experiments/stage2-comparative-conformer-n1-biosnap-seed42.yaml
+  value: configs/experiments/stage2-comparative-conformer-n8-biosnap-seed42.yaml
 dataset:
   desc: ''
   sort: 0
@@ -41,7 +41,7 @@ drug_fusion_gate_bias:
 early_stop_patience:
   desc: ''
   sort: 15
-  value: 10
+  value: 100
 field_enhance_gate_bias:
   desc: ''
   sort: 22
@@ -121,11 +121,11 @@ split:
 swanlab_experiment:
   desc: ''
   sort: 4
-  value: stage2-comparative-conformer-n1-biosnap-seed42
+  value: stage2-comparative-conformer-n8-biosnap-seed42
 swanlab_log_dir:
   desc: ''
   sort: 5
-  value: swanlog/stage2-comparative-conformer-n1-biosnap-seed42
+  value: swanlog/stage2-comparative-conformer-n8-biosnap-seed42
 train_micro_batch_size_per_gpu:
   desc: ''
   sort: 34
