@@ -1,6 +1,7 @@
-# Stage 2 Human best-candidate 02: weak protein-Mamba + no pos_weight, seed 43.
-# Runtime: --data datasets/human --split random --cache_root cache/features
-# No early stopping: EARLY_STOP_PATIENCE=0, train for MAX_EPOCH epochs.
+# Stage 2 main: Full TAMR-DTI n=8 on Human random3 split, seed 45.
+# Selection: validation AUROC best epoch; report test metrics at that epoch.
+# Runtime: --data datasets/human --split random3 --cache_root cache/features
+
 
 DRUG:
   NODE_IN_FEATS: 75
@@ -34,8 +35,9 @@ CROSSINTENTION:
   MAMBA_D_CONV: 4
   MAMBA_EXPAND: 2
   MAMBA_BIDIRECTIONAL: true
-  MAMBA_DROPOUT: 0.2
-  MAMBA_ENHANCE_GATE_BIAS: -4.0
+  MAMBA_DROPOUT: 0.1
+  # sigmoid(-2.0) ~= 0.119, stronger than M1-g4's ~= 0.018.
+  MAMBA_ENHANCE_GATE_BIAS: -2.0
   MAMBA_USE_FAST_PATH: false
   MAMBA_BACKEND: mamba1
   CF_START_EPOCH: 30
@@ -54,9 +56,9 @@ DECODER:
 
 SOLVER:
   MAX_EPOCH: 100
-  BATCH_SIZE: 16
+  BATCH_SIZE: 24
   NUM_WORKERS: 8
-  LR: 0.0001
+  LR: 0.00015
   USE_LD: true
   LR_DECAY: 0.5
   DECAY_INTERVAL: 25
@@ -64,12 +66,12 @@ SOLVER:
   LR_PATIENCE: 5
   MIN_LR: 0.000001
   WEIGHT_DECAY: 0.0001
-  USE_POS_WEIGHT: false
-  POS_WEIGHT: 1.0
-  EARLY_STOP_PATIENCE: 0
-  BEST_METRIC: auprc
-  MIN_DELTA: 0.0
-  SEED: 43
+  USE_POS_WEIGHT: true
+  POS_WEIGHT: 0.0
+  EARLY_STOP_PATIENCE: 10
+  BEST_METRIC: auroc
+  MIN_DELTA: 0.0001
+  SEED: 45
 
 RESULT:
   OUTPUT_DIR: outputs/result/
