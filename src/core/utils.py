@@ -50,7 +50,6 @@ def set_seed(seed=1000):
 
 DRUG_3D_ATOM_COUNT = 64
 DRUG_3D_FEATURE_DIM = 128
-DRUG_3D_CONFORMER_COUNT = 8
 
 
 def _pool_drug_3d_sample(feature, coor):
@@ -84,33 +83,84 @@ def _pool_drug_3d_sample(feature, coor):
 
 
 def _normalize_drug_3d_sample(feature, coor, conf_mask=None, energy=None):
-    norm_feature = torch.zeros(
-        DRUG_3D_CONFORMER_COUNT, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM, dtype=torch.float32
-    )
-    norm_coor = torch.zeros(DRUG_3D_CONFORMER_COUNT, DRUG_3D_ATOM_COUNT, 3, dtype=torch.float32)
-    norm_conf_mask = torch.zeros(DRUG_3D_CONFORMER_COUNT, dtype=torch.float32)
-    norm_energy = torch.zeros(DRUG_3D_CONFORMER_COUNT, dtype=torch.float32)
-
     if torch.is_tensor(feature) and torch.is_tensor(coor):
-        if tuple(feature.shape) == (DRUG_3D_CONFORMER_COUNT, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM):
+        if (
+            feature.ndim == 3
+            and coor.ndim == 3
+            and tuple(feature.shape[1:]) == (DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM)
+            and tuple(coor.shape[1:]) == (DRUG_3D_ATOM_COUNT, 3)
+            and int(feature.shape[0]) == int(coor.shape[0])
+        ):
+            num_conformers = int(feature.shape[0])
             norm_feature = feature.float()
             norm_coor = coor.float()
-            if torch.is_tensor(conf_mask) and tuple(conf_mask.shape) == (DRUG_3D_CONFORMER_COUNT,):
+            if torch.is_tensor(conf_mask) and tuple(conf_mask.shape) == (num_conformers,):
                 norm_conf_mask = conf_mask.float()
             else:
-                norm_conf_mask[:] = 1.0
-            if torch.is_tensor(energy) and tuple(energy.shape) == (DRUG_3D_CONFORMER_COUNT,):
+                norm_conf_mask = torch.ones(num_conformers, dtype=torch.float32)
+            if torch.is_tensor(energy) and tuple(energy.shape) == (num_conformers,):
                 norm_energy = energy.float()
+            else:
+                norm_energy = torch.zeros(num_conformers, dtype=torch.float32)
         elif tuple(feature.shape) == (DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM) and tuple(coor.shape) == (DRUG_3D_ATOM_COUNT, 3):
             pooled_feature, pooled_coor = _pool_drug_3d_sample(feature, coor)
+            norm_feature = torch.zeros(1, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM, dtype=torch.float32)
+            norm_coor = torch.zeros(1, DRUG_3D_ATOM_COUNT, 3, dtype=torch.float32)
+            norm_conf_mask = torch.zeros(1, dtype=torch.float32)
+            norm_energy = torch.zeros(1, dtype=torch.float32)
             norm_feature[0] = pooled_feature
             norm_coor[0] = pooled_coor
             norm_conf_mask[0] = 1.0
+        else:
+            norm_feature = torch.zeros(1, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM, dtype=torch.float32)
+            norm_coor = torch.zeros(1, DRUG_3D_ATOM_COUNT, 3, dtype=torch.float32)
+            norm_conf_mask = torch.ones(1, dtype=torch.float32)
+            norm_energy = torch.zeros(1, dtype=torch.float32)
+    else:
+        norm_feature = torch.zeros(1, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM, dtype=torch.float32)
+        norm_coor = torch.zeros(1, DRUG_3D_ATOM_COUNT, 3, dtype=torch.float32)
+        norm_conf_mask = torch.ones(1, dtype=torch.float32)
+        norm_energy = torch.zeros(1, dtype=torch.float32)
 
     if norm_conf_mask.sum().item() == 0:
         norm_conf_mask[0] = 1.0
 
     return norm_feature, norm_coor, norm_conf_mask, norm_energy
+
+
+def _pad_drug_3d_sample(drug_3d_sample, target_num_conformers):
+    feature, coor, conf_mask, energy = drug_3d_sample
+    num_conformers = int(feature.size(0))
+    if num_conformers == target_num_conformers:
+        return feature, coor, conf_mask, energy
+
+    padded_feature = torch.zeros(
+        target_num_conformers,
+        DRUG_3D_ATOM_COUNT,
+        DRUG_3D_FEATURE_DIM,
+        dtype=torch.float32,
+        device=feature.device,
+    )
+    padded_coor = torch.zeros(
+        target_num_conformers,
+        DRUG_3D_ATOM_COUNT,
+        3,
+        dtype=torch.float32,
+        device=coor.device,
+    )
+    padded_conf_mask = torch.zeros(target_num_conformers, dtype=torch.float32, device=conf_mask.device)
+    padded_energy = torch.zeros(target_num_conformers, dtype=torch.float32, device=energy.device)
+
+    copy_count = min(num_conformers, target_num_conformers)
+    if copy_count > 0:
+        padded_feature[:copy_count] = feature[:copy_count]
+        padded_coor[:copy_count] = coor[:copy_count]
+        padded_conf_mask[:copy_count] = conf_mask[:copy_count]
+        padded_energy[:copy_count] = energy[:copy_count]
+    if padded_conf_mask.sum().item() == 0:
+        padded_conf_mask[0] = 1.0
+
+    return padded_feature, padded_coor, padded_conf_mask, padded_energy
 
 
 #def graph_collate_func(x):
@@ -121,6 +171,10 @@ def graph_collate_func(x):
     feature_vectors, feature, coor, conf_mask, energy, d, v_p, protein_mask, y = zip(*x)
     drug_3d_features = [
         _normalize_drug_3d_sample(f, c, m, e) for f, c, m, e in zip(feature, coor, conf_mask, energy)
+    ]
+    max_num_conformers = max(1, max(int(item[0].size(0)) for item in drug_3d_features))
+    drug_3d_features = [
+        _pad_drug_3d_sample(item, max_num_conformers) for item in drug_3d_features
     ]
     feature = torch.stack([item[0] for item in drug_3d_features], dim=0)
     coor = torch.stack([item[1] for item in drug_3d_features], dim=0)

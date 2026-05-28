@@ -11,11 +11,6 @@ FEATURE_SCHEMA_VERSION = 3
 DRUG_1D_SHAPE = (354, 128)
 PROTEIN_SHAPE = (128, 1024)
 PROTEIN_MASK_SHAPE = (128,)
-DRUG3D_NUM_CONFORMERS = 8
-DRUG3D_FEATURE_SHAPE = (DRUG3D_NUM_CONFORMERS, 64, 128)
-DRUG3D_COOR_SHAPE = (DRUG3D_NUM_CONFORMERS, 64, 3)
-DRUG3D_CONF_MASK_SHAPE = (DRUG3D_NUM_CONFORMERS,)
-DRUG3D_ENERGY_SHAPE = (DRUG3D_NUM_CONFORMERS,)
 
 
 def feature_of(entry):
@@ -90,6 +85,7 @@ def main():
     parser.add_argument("--data", required=True, help="dataset path under data/, e.g. datasets/bindingdb")
     parser.add_argument("--split", default="random")
     parser.add_argument("--cache_root", default="cache/features")
+    parser.add_argument("--num_conformers", type=int, default=None)
     parser.add_argument(
         "--max_hash_items",
         type=int,
@@ -107,18 +103,28 @@ def main():
 
     failures = []
     print(f"[cache] dir={cache_dir}")
+    expected_num_conformers = args.num_conformers
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         print(f"[meta] feature_schema_version={meta.get('feature_schema_version')}")
         if meta.get("feature_schema_version") != FEATURE_SCHEMA_VERSION:
             failures.append(f"meta: feature_schema_version != {FEATURE_SCHEMA_VERSION}")
+        if expected_num_conformers is None:
+            expected_num_conformers = meta.get("drug3d_feature", {}).get("num_conformers")
     else:
         failures.append(f"meta: missing {meta_path}")
+    if expected_num_conformers is None:
+        expected_num_conformers = 8
+    expected_num_conformers = int(expected_num_conformers)
+    drug3d_feature_shape = (expected_num_conformers, 64, 128)
+    drug3d_coor_shape = (expected_num_conformers, 64, 3)
+    drug3d_conf_mask_shape = (expected_num_conformers,)
+    drug3d_energy_shape = (expected_num_conformers,)
 
     checks = [
         ("smiles", smiles_cache, feature_of, DRUG_1D_SHAPE),
         ("protein", protein_cache, feature_of, PROTEIN_SHAPE),
-        ("drug3d", drug3d_cache, lambda entry: entry.get("feature") if isinstance(entry, dict) else None, DRUG3D_FEATURE_SHAPE),
+        ("drug3d", drug3d_cache, lambda entry: entry.get("feature") if isinstance(entry, dict) else None, drug3d_feature_shape),
     ]
     for name, cache, extractor, expected_shape in checks:
         counter = shape_counter(cache, extractor)
@@ -156,9 +162,9 @@ def main():
     print(f"[drug3d_energy] shapes={most_common_shapes(drug3d_energy_shapes)}")
     print(f"[drug3d] ok={drug3d_ok}/{len(drug3d_cache)} schema_versions={dict(drug3d_versions)}")
     check_shape("protein_mask", protein_mask_shapes, PROTEIN_MASK_SHAPE, failures)
-    check_shape("drug3d_coor", drug3d_coor_shapes, DRUG3D_COOR_SHAPE, failures)
-    check_shape("drug3d_conf_mask", drug3d_conf_mask_shapes, DRUG3D_CONF_MASK_SHAPE, failures)
-    check_shape("drug3d_energy", drug3d_energy_shapes, DRUG3D_ENERGY_SHAPE, failures)
+    check_shape("drug3d_coor", drug3d_coor_shapes, drug3d_coor_shape, failures)
+    check_shape("drug3d_conf_mask", drug3d_conf_mask_shapes, drug3d_conf_mask_shape, failures)
+    check_shape("drug3d_energy", drug3d_energy_shapes, drug3d_energy_shape, failures)
     if set(drug3d_versions) != {FEATURE_SCHEMA_VERSION}:
         failures.append(f"drug3d: schema_version must be {FEATURE_SCHEMA_VERSION}")
 

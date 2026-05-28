@@ -17,11 +17,8 @@ FEATURE_CACHE_BY_DIR = {}
 DRUG_1D_SHAPE = (354, 128)
 PROTEIN_SHAPE = (128, 1024)
 PROTEIN_MASK_SHAPE = (128,)
-DRUG3D_NUM_CONFORMERS = 8
 DRUG3D_ATOM_COUNT = 64
 DRUG3D_FEATURE_DIM = 128
-DRUG3D_FEATURE_SHAPE = (DRUG3D_NUM_CONFORMERS, DRUG3D_ATOM_COUNT, DRUG3D_FEATURE_DIM)
-DRUG3D_COOR_SHAPE = (DRUG3D_NUM_CONFORMERS, DRUG3D_ATOM_COUNT, 3)
 DRUG3D_SINGLE_FEATURE_SHAPE = (DRUG3D_ATOM_COUNT, DRUG3D_FEATURE_DIM)
 DRUG3D_SINGLE_COOR_SHAPE = (DRUG3D_ATOM_COUNT, 3)
 
@@ -55,12 +52,11 @@ def _normalize_drug3d_entry(entry):
     if not torch.is_tensor(feature) or not torch.is_tensor(coor):
         return None
 
-    norm_feature = torch.zeros(DRUG3D_FEATURE_SHAPE, dtype=torch.float32)
-    norm_coor = torch.zeros(DRUG3D_COOR_SHAPE, dtype=torch.float32)
-    conf_mask = torch.zeros(DRUG3D_NUM_CONFORMERS, dtype=torch.float32)
-    energy = torch.zeros(DRUG3D_NUM_CONFORMERS, dtype=torch.float32)
-
     if tuple(feature.shape) == DRUG3D_SINGLE_FEATURE_SHAPE and tuple(coor.shape) == DRUG3D_SINGLE_COOR_SHAPE:
+        norm_feature = torch.zeros((1,) + DRUG3D_SINGLE_FEATURE_SHAPE, dtype=torch.float32)
+        norm_coor = torch.zeros((1,) + DRUG3D_SINGLE_COOR_SHAPE, dtype=torch.float32)
+        conf_mask = torch.zeros(1, dtype=torch.float32)
+        energy = torch.zeros(1, dtype=torch.float32)
         norm_feature[0] = feature.float()
         norm_coor[0] = coor.float()
         conf_mask[0] = 1.0
@@ -72,11 +68,16 @@ def _normalize_drug3d_entry(entry):
         return None
     if tuple(coor.shape[1:]) != DRUG3D_SINGLE_COOR_SHAPE:
         return None
+    if int(feature.shape[0]) != int(coor.shape[0]):
+        return None
 
-    valid_count = min(int(feature.shape[0]), DRUG3D_NUM_CONFORMERS)
+    valid_count = int(feature.shape[0])
+    norm_feature = torch.zeros((valid_count,) + DRUG3D_SINGLE_FEATURE_SHAPE, dtype=torch.float32)
+    norm_coor = torch.zeros((valid_count,) + DRUG3D_SINGLE_COOR_SHAPE, dtype=torch.float32)
+    conf_mask = torch.zeros(valid_count, dtype=torch.float32)
+    energy = torch.zeros(valid_count, dtype=torch.float32)
     if valid_count <= 0:
-        conf_mask[0] = 1.0
-        return norm_feature, norm_coor, conf_mask, energy
+        return None
 
     norm_feature[:valid_count] = feature[:valid_count].float()
     norm_coor[:valid_count] = coor[:valid_count].float()
@@ -192,7 +193,7 @@ class DTIDataset(data.Dataset):
                     "drug 3D feature/coordinate",
                     smile,
                     (_shape_of(drug3d_feature), _shape_of(drug3d_coor)),
-                    (DRUG3D_FEATURE_SHAPE, DRUG3D_COOR_SHAPE),
+                    "([K, 64, 128], [K, 64, 3]) with the same K",
                 )
             )
 
@@ -243,7 +244,7 @@ class DTIDataset(data.Dataset):
                     "drug 3D feature/coordinate",
                     smile,
                     (_shape_of(feature), _shape_of(coor)),
-                    (DRUG3D_FEATURE_SHAPE, DRUG3D_COOR_SHAPE),
+                    "([K, 64, 128], [K, 64, 3]) with the same K",
                 )
             )
         feature, coor, conf_mask, energy = normalized_drug3d
@@ -282,16 +283,16 @@ class DTIDataset(data.Dataset):
         图里节点特征 v_d.ndata['h'] 的形状是 [290, 75]
         其中 290 = max_drug_nodes，75 = 74 + 1(virtual node bit)，74维表示原子特征
 
-        feature：[8, 64, 128]（Tensor）
+        feature：[K, 64, 128]（Tensor）
         来自 drug3d_features.pt 的离线多构象 3D 原子特征，已固定长度池化
 
-        coor：[8, 64, 3]（Tensor）
+        coor：[K, 64, 3]（Tensor）
         来自 drug3d_features.pt 的离线多构象 3D 坐标，已固定长度池化
 
-        conf_mask：[8]（Tensor）
+        conf_mask：[K]（Tensor）
         有效构象 mask
 
-        energy：[8]（Tensor）
+        energy：[K]（Tensor）
         归一化后的构象能量
 
         v_p：[128, 1024]
