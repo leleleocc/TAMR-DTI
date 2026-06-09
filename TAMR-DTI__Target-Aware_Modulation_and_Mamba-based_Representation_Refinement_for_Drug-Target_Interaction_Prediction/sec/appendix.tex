@@ -1,0 +1,31 @@
+\section{Additional Dataset Statistics}
+\label{app:dataset_statistics}
+
+For the main experiments, each dataset is split into training, validation, and test sets under a fixed random split. The training set is used for optimization, the validation set is used for checkpoint and threshold selection, and the test set is used only for final reporting. Table~\ref{tab:data_split_appendix} reports the label distribution of each split. The split-level distribution is reported in the appendix because the main text focuses on aggregate dataset differences, while these counts document the exact processed split files used by the experiments.
+
+\begin{table}[!htbp]
+\caption{Train/validation/test split distribution for the main experiments. Counts are computed from the processed split files used in this study.}
+\label{tab:data_split_appendix}
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Split & Samples & Positive & Negative & Positive rate \\
+\midrule
+BindingDB & Train & 34,439 & 14,583 & 19,856 & 42.34\% \\
+BindingDB & Validation & 4,920 & 2,017 & 2,903 & 41.00\% \\
+BindingDB & Test & 9,840 & 4,074 & 5,766 & 41.40\% \\
+BioSNAP & Train & 19,224 & 9,684 & 9,540 & 50.37\% \\
+BioSNAP & Validation & 2,747 & 1,398 & 1,349 & 50.89\% \\
+BioSNAP & Test & 5,493 & 2,748 & 2,745 & 50.03\% \\
+Human & Train & 4,197 & 1,846 & 2,351 & 43.98\% \\
+Human & Validation & 600 & 251 & 349 & 41.83\% \\
+Human & Test & 1,200 & 536 & 664 & 44.67\% \\
+C. elegans & Train & 5,450 & 2,727 & 2,723 & 50.04\% \\
+C. elegans & Validation & 778 & 405 & 373 & 52.06\% \\
+C. elegans & Test & 1,558 & 761 & 797 & 48.84\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}

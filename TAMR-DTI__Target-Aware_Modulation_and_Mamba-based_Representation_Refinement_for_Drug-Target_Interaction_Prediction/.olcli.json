@@ -1,0 +1,25 @@
+{
+  "projectId": "6a0350bad2bfd6cd646ddffd",
+  "projectName": "TAMR-DTI: Target-Aware Modulation and Mamba-based Representation Refinement for Drug-Target Interaction Prediction",
+  "lastPull": "2026-05-19T14:28:37.971Z",
+  "remoteManifest": [
+    "main.tex",
+    "tamr_dti.bib",
+    "tamr_dti.tex",
+    "math_commands.tex",
+    "fancyhdr.sty",
+    "natbib.sty",
+    "tamr_dti.sty",
+    "tamr_dti.bst",
+    "abstract.tex",
+    "introduction.tex",
+    "sec/abstract.tex",
+    "sec/conclusion.tex",
+    "sec/discussion.tex",
+    "sec/experiments.tex",
+    "sec/introduction.tex",
+    "sec/methodology.tex",
+    "sec/related_work.tex"
+  ],
+  "lastPush": "2026-06-03T12:07:51.253Z"
+}

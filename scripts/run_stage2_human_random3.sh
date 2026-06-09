@@ -41,7 +41,7 @@ DRY_RUN="${DRY_RUN:-0}"
 
 # New seeds:
 RUNS=(
-  "1|stage2_main_human_random3_seed0|stage2-main-human-random3-seed0"
+  "1|stage2_main_human_random3_seed43|stage2-main-human-random3-seed43"
   "2|stage2_main_human_random3_seed48|stage2-main-human-random3-seed48"
   "3|stage2_main_human_random3_seed49|stage2-main-human-random3-seed49"
   "4|stage2_main_human_random3_seed52|stage2-main-human-random3-seed52"

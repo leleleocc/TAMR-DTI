@@ -1,0 +1,25 @@
+\begin{abstract}
+Existing multimodal drug-target interaction (DTI) methods often aggregate
+molecular conformers as target-independent drug features, so the same ligand
+geometry is summarized regardless of the paired protein. They also struggle to
+balance long-range protein representation learning with explicit cross-modal
+drug-target matching, since generic sequence refinement can weaken the
+interaction bias required by DTI prediction. To address these limitations, we
+propose TAMR-DTI, a target-aware multimodal framework that improves a strong
+BiIntention-based backbone through two complementary innovations. First, a
+target-aware modulation mechanism uses protein context to reweight drug
+conformer information and uses fused ligand cues to condition protein token
+encoding, enabling both modalities to be represented under pair-specific
+interaction context. Second, a gated Mamba refinement block is applied only to
+the ordered protein token stream before BiIntention, enhancing protein sequence
+modeling while preserving explicit drug-target alignment. We evaluate TAMR-DTI
+on BindingDB, BioSNAP, Human, and C. elegans under repeated-seed
+train/validation/test splits. The results show improved ranking metrics across
+all four benchmarks, with the clearest gain on BioSNAP, while the Human
+benchmark remains a higher-variance setting for fixed-threshold
+prediction. Ablation and comparative experiments further support the
+effectiveness of target-aware modulation and protein-side state-space
+refinement. Overall, TAMR-DTI demonstrates that target-conditioned molecular
+geometry and protein-only sequence refinement can be jointly integrated to
+produce a stronger, more interaction-aware framework for DTI prediction.
+\end{abstract}

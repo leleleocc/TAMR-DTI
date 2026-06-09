@@ -1,5 +1,4 @@
 # Stage 2 main: Full TAMR-DTI n=8 on Human random3 split, seed 43.
-# Re-training with batch_size=32, lr=0.0002.
 # Selection: validation AUROC best epoch; report test metrics at that epoch.
 # Runtime: --data datasets/human --split random3 --cache_root cache/features
 
@@ -56,9 +55,9 @@ DECODER:
 
 SOLVER:
   MAX_EPOCH: 100
-  BATCH_SIZE: 32
+  BATCH_SIZE: 24
   NUM_WORKERS: 8
-  LR: 0.0002
+  LR: 0.00015
   USE_LD: true
   LR_DECAY: 0.5
   DECAY_INTERVAL: 25

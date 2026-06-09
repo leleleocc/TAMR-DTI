@@ -1,0 +1,33 @@
+\section{Conclusion}
+
+We presented TAMR-DTI, a multimodal DTI framework that represents drug-target
+pairs through target-aware modulation and protein-side Mamba refinement. The
+model addresses two limitations of fixed multimodal encoding: a ligand should
+not be forced into the same conformer summary for every target, and long-range
+protein refinement should not remove the explicit interaction modeling needed
+for DTI prediction. TAMR-DTI therefore lets protein context reweight molecular
+conformers, lets ligand context modulate protein tokens, and applies a gated
+Mamba residual block only to the ordered protein sequence before BiIntention
+cross-modal matching.
+
+Across five repeated runs on four benchmark datasets, TAMR-DTI improves AUROC
+and AUPRC on BindingDB, BioSNAP, Human, and C. elegans, with the
+strongest improvement on BioSNAP. The Human benchmark still prevents a claim of
+uniform superiority because its fixed-threshold scores remain weaker and more
+variable than its ranking metrics. The BioSNAP ablation, conformer-count
+comparison, and interpretability analyses nevertheless provide consistent
+mechanism-level evidence: target-aware conformer aggregation improves ranking
+quality, ligand-conditioned protein modulation affects thresholded decisions,
+and protein-side Mamba refinement contributes a controlled sequence-dependent
+update.
+
+Overall, TAMR-DTI shows that pair-specific molecular geometry and protein-only
+sequence refinement can be integrated without discarding explicit drug-target
+matching. The resulting model is best viewed as a competitive, dataset-dependent
+extension of a strong multimodal DTI backbone. Future work should strengthen the
+evidence with matched multi-seed ablations, harder generalization splits, and
+more direct structural supervision for conformer selection and binding-site
+interpretation.
+
+\subsubsection*{Acknowledgments}
+Omitted for anonymous review.

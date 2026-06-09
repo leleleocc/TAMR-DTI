@@ -6,5 +6,8 @@ cache/
 .DS_Store
 __pycache__/
 *.tar.xz
-swanlog/**/swanlab-metadata.json
 token
+causal-conv1d-1.6.1.post4
+causal-conv1d-1.6.1.post4.zip
+mamba-2.2.2
+mamba-2.2.2.zip
