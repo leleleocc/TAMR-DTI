@@ -1,3 +1,13 @@
-1、论文中实验配置提到了CF,删掉相关CF的内容
-2、图换颜色（对比不够明显）
-3、第二大章提到了多维小分子建模了么
+# TODO
+
+- [] 论文要介绍 data preprocessing（drug 端 SMILES → 1D/2D/3D）
+      - 配图已生成：drug_preprocess.pptx（脚本 scripts/gen_drug_preprocess_figure.py）
+      - 要写的三条分支（对应代码 scripts/pre_extract.py、src/data/dataloader.py）：
+        - 1D 序列：AutoTokenizer 分词 → ChemBERTa-77M-MTR(frozen) → 去特殊 token + 自适应池化 → tokens [354×128]
+        - 2D 图：RDKit 解析原子/键 → CanonicalAtom/BondFeaturizer → DGL bigraph；
+          node X [290×75]（74 原子特征 + 1 virtual-node bit，max_drug_nodes=290），
+          edge E [E×13]（12 维键特征 + 1 维 self-loop 标志，self_loop=True），
+          adjacency A（对角线=self-loops，Â=A+I）
+        - 3D 构象：AddHs → ETKDGv3 embed K confs → UFF 优化 + 能量 → 按能量排序；
+          feature [K×64×128]、coords [K×64×3]、energy [K]（UFF→z-score）、conf_mask [K]，池化到 64 原子/构象
+      - 蛋白端预处理（ProtBERT 等）后续也补一段
