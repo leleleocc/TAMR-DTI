@@ -36,6 +36,35 @@ drug token length after topology-geometry concatenation is
 $L_d=N_g+N_c=354$. The protein sequence length is denoted by $L_p$, with a
 binary mask $\mathbf{m}\in\{0,1\}^{L_p}$ used to identify valid residues.
 
+\subsection{Drug Data Preprocessing}
+\label{sec:drug_data_preprocessing}
+
+Figure~\ref{fig:drug_preprocess} summarizes how each SMILES string is converted
+into the three drug views used by TAMR-DTI. For the 1D semantic view, the SMILES
+string is tokenized and encoded by a frozen ChemBERTa-77M-MTR model; after
+removing special tokens, the hidden states are adaptively pooled to a fixed
+matrix $\mathbf{X}^{1D}\in\mathbb{R}^{354\times128}$. For the 2D topological
+view, RDKit parses atoms and bonds from the same SMILES string, and canonical
+atom and bond featurizers construct a molecular graph with node features, edge
+features, and adjacency information. For the 3D geometric view, hydrogens are
+added before RDKit ETKDGv3 generates $K$ candidate conformers. When UFF
+parameters are available, each conformer is optimized and assigned an energy;
+the conformers are then sorted by energy and converted into fixed-size atom
+features $\mathbf{F}_k$, coordinates $\mathbf{R}_k$, a normalized energy
+$\epsilon_k$, and a validity indicator $q_k$. These processed 1D, 2D, and 3D
+representations form the direct drug-side inputs to the encoder.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/drug_preprocess.pdf}
+\caption{Drug data preprocessing. Starting from a SMILES string, TAMR-DTI
+constructs a ChemBERTa semantic-token matrix, an RDKit/DGL molecular graph, and
+a set of energy-ranked 3D conformers with atom features, coordinates, energies,
+and conformer-validity indicators.}
+\label{fig:drug_preprocess}
+\end{figure}
+\FloatBarrier
+
 \subsection{Model Overview}
 \label{sec:overall_framework}
 
