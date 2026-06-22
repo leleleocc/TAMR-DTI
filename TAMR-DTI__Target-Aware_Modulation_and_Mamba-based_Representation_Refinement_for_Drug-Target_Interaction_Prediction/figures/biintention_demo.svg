@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="850" viewBox="0 0 1400 850">
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #eef4fb; stroke: #c7d2df; stroke-width: 3; }
+      .box { fill: #d9e8fb; stroke: #b6cae6; stroke-width: 2; }
+      .box2 { fill: #e4effc; stroke: #b6cae6; stroke-width: 2; }
+      .tag { fill: #ffffff; stroke: #b6cae6; stroke-width: 2; }
+      .out { fill: #dbe7f5; stroke: #9fb5d2; stroke-width: 2; }
+      .text { font-family: Arial, Helvetica, sans-serif; fill: #174a9c; font-weight: 700; }
+      .small { font-family: Arial, Helvetica, sans-serif; fill: #315070; font-weight: 600; }
+      .muted { font-family: Arial, Helvetica, sans-serif; fill: #6b7280; font-weight: 500; }
+      .arrow { stroke: #275aa4; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .skip { stroke: #7c3aed; stroke-width: 4; fill: none; marker-end: url(#arrowPurple); }
+      .thin { stroke-width: 3; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#275aa4"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="850"/>
+
+  <text class="text" x="700" y="58" font-size="34" text-anchor="middle">
+    BiIntention: Bidirectional Intention Matching
+  </text>
+
+  <rect class="box2" x="74" y="96" width="310" height="82" rx="22"/>
+  <text class="text" x="229" y="129" font-size="23" text-anchor="middle">Fused Drug Tokens</text>
+  <text class="small" x="229" y="157" font-size="18" text-anchor="middle">D  [354 x 128]</text>
+
+  <rect class="box2" x="1016" y="96" width="310" height="82" rx="22"/>
+  <text class="text" x="1171" y="129" font-size="23" text-anchor="middle">Refined Protein Tokens</text>
+  <text class="small" x="1171" y="157" font-size="18" text-anchor="middle">P~  [Lp x 128]</text>
+
+  <rect class="box" x="112" y="216" width="234" height="70" rx="18"/>
+  <text class="text" x="229" y="245" font-size="20" text-anchor="middle">Drug Self-Attn</text>
+  <text class="small" x="229" y="270" font-size="16" text-anchor="middle">D_s</text>
+
+  <rect class="box" x="1054" y="216" width="234" height="70" rx="18"/>
+  <text class="text" x="1171" y="245" font-size="20" text-anchor="middle">Protein Self-Attn</text>
+  <text class="small" x="1171" y="270" font-size="16" text-anchor="middle">P_s</text>
+
+  <path class="arrow" d="M 229 178 L 229 216"/>
+  <path class="skip" d="M 1171 178 L 1171 216"/>
+
+  <rect class="panel" x="110" y="326" width="1180" height="384" rx="68"/>
+  <text class="muted" x="700" y="358" font-size="18" text-anchor="middle">
+    both streams enter both intention branches; source and query roles are reversed
+  </text>
+
+  <!-- Input tags for the left branch -->
+  <rect class="tag" x="230" y="382" width="130" height="44" rx="12"/>
+  <text class="small" x="295" y="409" font-size="16" text-anchor="middle">query D_s</text>
+  <rect class="tag" x="410" y="382" width="130" height="44" rx="12"/>
+  <text class="small" x="475" y="409" font-size="16" text-anchor="middle">source P_s</text>
+
+  <!-- Input tags for the right branch -->
+  <rect class="tag" x="860" y="382" width="130" height="44" rx="12"/>
+  <text class="small" x="925" y="409" font-size="16" text-anchor="middle">source D_s</text>
+  <rect class="tag" x="1040" y="382" width="130" height="44" rx="12"/>
+  <text class="small" x="1105" y="409" font-size="16" text-anchor="middle">query P_s</text>
+
+  <!-- Branches -->
+  <rect class="box" x="190" y="454" width="390" height="92" rx="22"/>
+  <text class="text" x="385" y="491" font-size="24" text-anchor="middle">Protein-guided</text>
+  <text class="text" x="385" y="522" font-size="24" text-anchor="middle">Drug Intention</text>
+
+  <rect class="box" x="820" y="454" width="390" height="92" rx="22"/>
+  <text class="text" x="1015" y="491" font-size="24" text-anchor="middle">Drug-guided</text>
+  <text class="text" x="1015" y="522" font-size="24" text-anchor="middle">Protein Intention</text>
+
+  <rect class="box2" x="240" y="594" width="290" height="76" rx="20"/>
+  <text class="text" x="385" y="626" font-size="23" text-anchor="middle">Max-Pool</text>
+  <text class="small" x="385" y="654" font-size="18" text-anchor="middle">h_d  [128]</text>
+
+  <rect class="box2" x="870" y="594" width="290" height="76" rx="20"/>
+  <text class="text" x="1015" y="626" font-size="23" text-anchor="middle">Max-Pool</text>
+  <text class="small" x="1015" y="654" font-size="18" text-anchor="middle">h_p  [128]</text>
+
+  <rect class="out" x="430" y="720" width="540" height="58" rx="4"/>
+  <text class="text" x="700" y="745" font-size="22" text-anchor="middle">Concatenate</text>
+  <text class="small" x="700" y="770" font-size="17" text-anchor="middle">f = [h_d ; h_p]  [256]</text>
+
+  <rect class="box2" x="535" y="792" width="330" height="42" rx="16"/>
+  <text class="text" x="700" y="820" font-size="21" text-anchor="middle">MLP Predictor -> score</text>
+
+  <!-- Routes from self-attention outputs to both branches -->
+  <path class="arrow thin" d="M 229 286 C 229 330, 270 348, 295 382"/>
+  <path class="arrow thin" d="M 229 286 C 430 330, 740 334, 925 382"/>
+  <path class="skip thin" d="M 1171 286 C 1171 330, 1130 348, 1105 382"/>
+  <path class="skip thin" d="M 1171 286 C 970 330, 660 334, 475 382"/>
+
+  <!-- Tags into branches -->
+  <path class="arrow thin" d="M 295 426 C 295 444, 330 444, 350 454"/>
+  <path class="skip thin" d="M 475 426 C 475 444, 440 444, 420 454"/>
+  <path class="arrow thin" d="M 925 426 C 925 444, 960 444, 980 454"/>
+  <path class="skip thin" d="M 1105 426 C 1105 444, 1070 444, 1050 454"/>
+
+  <path class="arrow" d="M 385 546 L 385 594"/>
+  <path class="arrow" d="M 1015 546 L 1015 594"/>
+
+  <path class="arrow" d="M 385 670 C 385 706, 520 704, 600 720"/>
+  <path class="arrow" d="M 1015 670 C 1015 706, 880 704, 800 720"/>
+  <path class="arrow" d="M 700 778 L 700 792"/>
+</svg>

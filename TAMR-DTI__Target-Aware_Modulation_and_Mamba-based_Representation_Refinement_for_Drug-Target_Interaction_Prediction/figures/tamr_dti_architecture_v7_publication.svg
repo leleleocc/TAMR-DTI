@@ -1,0 +1,269 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1350" viewBox="0 0 2400 1350">
+  <defs>
+    <style>
+      .bg{fill:#fff}
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:38px;font-weight:800;fill:#162033}
+      .subtitle{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#637083}
+      .panelTitle{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:800;fill:#172236}
+      .laneLabel{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:800;fill:#526071;text-transform:uppercase;letter-spacing:.5px}
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:800;fill:#1d2738}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:15px;fill:#536174}
+      .tiny{font-family:Arial,Helvetica,sans-serif;font-size:13px;fill:#667386}
+      .mono{font-family:Consolas,Menlo,monospace;font-size:14px;fill:#2d3a4d}
+      .panel{fill:#fbfcfe;stroke:#cad5e2;stroke-width:2}
+      .drugPanel{fill:#f7fcfa;stroke:#92c9ad;stroke-width:2.2}
+      .proteinPanel{fill:#f6f9ff;stroke:#93aee0;stroke-width:2.2}
+      .finalPanel{fill:#fff9f5;stroke:#e4a18e;stroke-width:2.2}
+      .inputBox{fill:#f9fbfe;stroke:#cbd5e2;stroke-width:2}
+      .module{fill:#fff;stroke:#b8c5d6;stroke-width:2}
+      .blue{fill:#edf4ff;stroke:#8ba8dc;stroke-width:2}
+      .green{fill:#edf8f2;stroke:#80bd9d;stroke-width:2}
+      .amber{fill:#fff4df;stroke:#d7a04a;stroke-width:2}
+      .purple{fill:#f3efff;stroke:#aa97df;stroke-width:2}
+      .rose{fill:#fff1ed;stroke:#db8e7b;stroke-width:2}
+      .arrow{stroke:#2f3d55;stroke-width:2.4;fill:none;marker-end:url(#arrow);stroke-linecap:round;stroke-linejoin:round}
+      .softArrow{stroke:#6d7b8d;stroke-width:2.2;fill:none;marker-end:url(#softArrow);stroke-linecap:round;stroke-linejoin:round}
+      .condition{stroke:#d29428;stroke-width:2.6;fill:none;marker-end:url(#condition);stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:8 8}
+      .film{stroke:#2a9e75;stroke-width:2.6;fill:none;marker-end:url(#film);stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:8 8}
+      .bus{stroke:#6d7b8d;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .bond{stroke:#344258;stroke-width:2.3;stroke-linecap:round}
+      .atomC{fill:#67be95;stroke:#2d8460;stroke-width:1.4}
+      .atomN{fill:#6b93d4;stroke:#355f9b;stroke-width:1.4}
+      .atomO{fill:#df7368;stroke:#a74339;stroke-width:1.4}
+      .atomY{fill:#e8ba57;stroke:#a9791b;stroke-width:1.4}
+      .tokenBlue{fill:#6788c9;stroke:#3f61a1;stroke-width:1.2}
+      .tokenGreen{fill:#62b889;stroke:#31805c;stroke-width:1.2}
+      .tokenAmber{fill:#e9ad55;stroke:#b27622;stroke-width:1.2}
+      .tokenPurple{fill:#9a8bd3;stroke:#6b5aa5;stroke-width:1.2}
+      .heatA{fill:#d9cff8}.heatB{fill:#b9a8e8}.heatC{fill:#9279d4}.heatD{fill:#eee9fb}
+    </style>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#2f3d55"/>
+    </marker>
+    <marker id="softArrow" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="9" refX="9" refY="4.5" orient="auto">
+      <path d="M0,0 L11,4.5 L0,9 Z" fill="#6d7b8d"/>
+    </marker>
+    <marker id="condition" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#d29428"/>
+    </marker>
+    <marker id="film" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#2a9e75"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="2400" height="1350"/>
+  <text class="title" x="1200" y="58" text-anchor="middle">TAMR-DTI architecture</text>
+  <text class="subtitle" x="1200" y="88" text-anchor="middle">Target-aware multi-conformer drug representation and Mamba-based protein refinement for DTI prediction</text>
+
+  <!-- Inputs -->
+  <rect class="inputBox" x="58" y="270" width="220" height="235" rx="14"/>
+  <text class="panelTitle" x="168" y="310" text-anchor="middle">Drug input</text>
+  <text class="mono" x="92" y="350">SMILES</text>
+  <text class="mono" x="92" y="374">CC(=O)Oc1...</text>
+  <g transform="translate(92 408)">
+    <line class="bond" x1="0" y1="24" x2="34" y2="4"/>
+    <line class="bond" x1="34" y1="4" x2="68" y2="24"/>
+    <line class="bond" x1="68" y1="24" x2="102" y2="4"/>
+    <line class="bond" x1="102" y1="4" x2="136" y2="24"/>
+    <line class="bond" x1="68" y1="24" x2="68" y2="62"/>
+    <circle class="atomO" cx="0" cy="24" r="8"/>
+    <circle class="atomC" cx="34" cy="4" r="8"/>
+    <circle class="atomC" cx="68" cy="24" r="8"/>
+    <circle class="atomC" cx="102" cy="4" r="8"/>
+    <circle class="atomY" cx="136" cy="24" r="8"/>
+    <circle class="atomO" cx="68" cy="62" r="8"/>
+  </g>
+
+  <rect class="inputBox" x="58" y="865" width="220" height="190" rx="14"/>
+  <text class="panelTitle" x="168" y="905" text-anchor="middle">Protein input</text>
+  <text class="mono" x="92" y="948">MAVSEQ...</text>
+  <text class="mono" x="92" y="977">LSKNYH...</text>
+  <text class="mono" x="92" y="1006">LKKLV...</text>
+
+  <!-- Drug representation panel -->
+  <rect class="drugPanel" x="315" y="135" width="1575" height="610" rx="20"/>
+  <text class="panelTitle" x="350" y="176">Drug representation learning from SMILES</text>
+  <text class="small" x="350" y="205">ChemBERTa is used only for the 1D branch; 2D and 3D are generated from SMILES by graph and conformer preprocessing.</text>
+
+  <!-- SMILES fan-out -->
+  <path class="arrow" d="M278 390 H330"/>
+  <path class="bus" d="M338 285 V550"/>
+  <path class="softArrow" d="M338 285 H405"/>
+  <path class="softArrow" d="M338 415 H405"/>
+  <path class="softArrow" d="M338 545 H405"/>
+
+  <!-- 1D branch -->
+  <text class="laneLabel" x="355" y="264">1D semantic branch</text>
+  <rect class="green" x="405" y="275" width="160" height="70" rx="8"/>
+  <text class="label" x="485" y="318" text-anchor="middle">ChemBERTa</text>
+  <path class="arrow" d="M565 310 H1290"/>
+  <rect class="module" x="1290" y="270" width="190" height="82" rx="10"/>
+  <text class="label" x="1385" y="301" text-anchor="middle">1D embedding</text>
+  <text class="tiny" x="1385" y="324" text-anchor="middle">semantic tokens</text>
+  <rect class="tokenBlue" x="1338" y="334" width="13" height="30" rx="3"/>
+  <rect class="tokenBlue" x="1366" y="334" width="13" height="30" rx="3"/>
+  <rect class="tokenBlue" x="1394" y="334" width="13" height="30" rx="3"/>
+  <rect class="tokenBlue" x="1422" y="334" width="13" height="30" rx="3"/>
+  <path class="arrow" d="M1480 310 H1615"/>
+
+  <!-- 2D branch -->
+  <text class="laneLabel" x="355" y="394">2D topology branch</text>
+  <rect class="green" x="405" y="405" width="135" height="70" rx="8"/>
+  <text class="label" x="472" y="448" text-anchor="middle">DGLLife</text>
+  <path class="arrow" d="M540 440 H590"/>
+  <rect class="module" x="590" y="390" width="165" height="100" rx="10"/>
+  <text class="label" x="672" y="420" text-anchor="middle">molecular graph</text>
+  <g transform="translate(626 442)">
+    <line class="bond" x1="0" y1="24" x2="38" y2="4"/>
+    <line class="bond" x1="38" y1="4" x2="76" y2="24"/>
+    <line class="bond" x1="76" y1="24" x2="114" y2="4"/>
+    <circle class="atomN" cx="0" cy="24" r="7"/>
+    <circle class="atomC" cx="38" cy="4" r="7"/>
+    <circle class="atomC" cx="76" cy="24" r="7"/>
+    <circle class="atomO" cx="114" cy="4" r="7"/>
+  </g>
+  <path class="arrow" d="M755 440 H805"/>
+  <rect class="green" x="805" y="405" width="130" height="70" rx="8"/>
+  <text class="label" x="870" y="448" text-anchor="middle">GCN</text>
+  <path class="arrow" d="M935 440 H1290"/>
+  <rect class="module" x="1290" y="400" width="190" height="82" rx="10"/>
+  <text class="label" x="1385" y="431" text-anchor="middle">2D tokens</text>
+  <text class="tiny" x="1385" y="454" text-anchor="middle">graph-level features</text>
+  <rect class="tokenGreen" x="1338" y="464" width="13" height="30" rx="3"/>
+  <rect class="tokenGreen" x="1366" y="464" width="13" height="30" rx="3"/>
+  <rect class="tokenGreen" x="1394" y="464" width="13" height="30" rx="3"/>
+  <rect class="tokenGreen" x="1422" y="464" width="13" height="30" rx="3"/>
+  <path class="arrow" d="M1480 440 H1615"/>
+
+  <!-- 3D branch -->
+  <text class="laneLabel" x="355" y="524">3D geometry branch</text>
+  <rect class="amber" x="405" y="535" width="150" height="70" rx="8"/>
+  <text class="label" x="480" y="565" text-anchor="middle">RDKit</text>
+  <text class="tiny" x="480" y="587" text-anchor="middle">ETKDG / UFF</text>
+  <path class="arrow" d="M555 570 H600"/>
+  <rect class="module" x="600" y="518" width="170" height="105" rx="10"/>
+  <text class="label" x="685" y="549" text-anchor="middle">k conformers</text>
+  <text class="tiny" x="685" y="572" text-anchor="middle">coords + energy</text>
+  <g transform="translate(638 589)">
+    <line class="bond" x1="0" y1="14" x2="34" y2="-4"/>
+    <line class="bond" x1="34" y1="-4" x2="70" y2="18"/>
+    <line class="bond" x1="34" y1="-4" x2="34" y2="-34"/>
+    <circle class="atomC" cx="0" cy="14" r="7"/>
+    <circle class="atomN" cx="34" cy="-4" r="7"/>
+    <circle class="atomC" cx="70" cy="18" r="7"/>
+    <circle class="atomO" cx="34" cy="-34" r="7"/>
+  </g>
+  <path class="arrow" d="M770 570 H805"/>
+  <rect class="amber" x="805" y="535" width="130" height="70" rx="8"/>
+  <text class="label" x="870" y="578" text-anchor="middle">EGNN</text>
+  <path class="arrow" d="M935 570 H980"/>
+  <rect class="module" x="980" y="518" width="170" height="105" rx="10"/>
+  <text class="label" x="1065" y="548" text-anchor="middle">T_k tokens</text>
+  <text class="tiny" x="1065" y="570" text-anchor="middle">and summary h_k</text>
+  <rect class="tokenAmber" x="1024" y="588" width="13" height="30" rx="3"/>
+  <rect class="tokenAmber" x="1052" y="588" width="13" height="30" rx="3"/>
+  <rect class="tokenAmber" x="1080" y="588" width="13" height="30" rx="3"/>
+  <path class="arrow" d="M1150 570 H1190"/>
+  <rect class="amber" x="1190" y="510" width="205" height="118" rx="10"/>
+  <text class="label" x="1292" y="541" text-anchor="middle">Conformer weighting</text>
+  <text class="tiny" x="1292" y="566" text-anchor="middle">MLP + softmax over k</text>
+  <text class="tiny" x="1292" y="590" text-anchor="middle">inputs: h_k, P0, energy</text>
+  <path class="arrow" d="M1395 570 H1425"/>
+  <rect class="module" x="1425" y="530" width="150" height="82" rx="10"/>
+  <text class="label" x="1500" y="560" text-anchor="middle">weighted 3D</text>
+  <text class="tiny" x="1500" y="582" text-anchor="middle">alpha_k * T_k</text>
+  <rect class="tokenAmber" x="1463" y="592" width="13" height="30" rx="3"/>
+  <rect class="tokenAmber" x="1492" y="592" width="13" height="30" rx="3"/>
+  <rect class="tokenAmber" x="1521" y="592" width="13" height="30" rx="3"/>
+  <path class="arrow" d="M1575 570 H1615"/>
+
+  <!-- Drug fusion -->
+  <rect class="purple" x="1615" y="245" width="190" height="365" rx="14"/>
+  <text class="label" x="1710" y="289" text-anchor="middle">Drug fusion</text>
+  <text class="small" x="1710" y="318" text-anchor="middle">1D / 2D / 3D</text>
+  <text class="tiny" x="1710" y="342" text-anchor="middle">simple gated merge</text>
+  <rect class="tokenBlue" x="1666" y="382" width="15" height="36" rx="3"/>
+  <rect class="tokenGreen" x="1698" y="382" width="15" height="36" rx="3"/>
+  <rect class="tokenAmber" x="1730" y="382" width="15" height="36" rx="3"/>
+  <text class="label" x="1710" y="468" text-anchor="middle">D, d_g</text>
+  <text class="tiny" x="1710" y="493" text-anchor="middle">drug tokens + context</text>
+
+  <!-- Protein representation panel -->
+  <rect class="proteinPanel" x="315" y="805" width="1575" height="320" rx="20"/>
+  <text class="panelTitle" x="350" y="848">Protein representation and ligand-conditioned refinement</text>
+
+  <path class="arrow" d="M278 960 H370"/>
+  <rect class="blue" x="370" y="915" width="150" height="90" rx="10"/>
+  <text class="label" x="445" y="952" text-anchor="middle">ProtBERT</text>
+  <text class="tiny" x="445" y="976" text-anchor="middle">sequence encoder</text>
+  <path class="arrow" d="M520 960 H615"/>
+  <rect class="module" x="615" y="900" width="185" height="120" rx="12"/>
+  <text class="label" x="708" y="936" text-anchor="middle">protein seed</text>
+  <text class="tiny" x="708" y="960" text-anchor="middle">tokens P0</text>
+  <rect class="tokenBlue" x="666" y="978" width="13" height="36" rx="3"/>
+  <rect class="tokenBlue" x="696" y="978" width="13" height="36" rx="3"/>
+  <rect class="tokenBlue" x="726" y="978" width="13" height="36" rx="3"/>
+
+  <path class="condition" d="M800 930 H1105 V770 H1292 V628"/>
+  <text class="tiny" x="890" y="760">P0 conditions conformer weights</text>
+
+  <path class="arrow" d="M800 960 H1320"/>
+  <rect class="green" x="1320" y="905" width="210" height="110" rx="12"/>
+  <text class="label" x="1425" y="943" text-anchor="middle">FiLM</text>
+  <text class="tiny" x="1425" y="968" text-anchor="middle">gamma, beta from d_g</text>
+  <text class="tiny" x="1425" y="991" text-anchor="middle">modulates P0</text>
+  <path class="film" d="M1710 610 V770 H1425 V905"/>
+  <text class="tiny" x="1555" y="760">drug context d_g conditions protein</text>
+
+  <path class="arrow" d="M1530 960 H1570"/>
+  <rect class="blue" x="1570" y="915" width="145" height="90" rx="10"/>
+  <text class="label" x="1642" y="952" text-anchor="middle">ProteinACmix</text>
+  <text class="tiny" x="1642" y="976" text-anchor="middle">x3 blocks</text>
+  <path class="arrow" d="M1715 960 H1745"/>
+  <rect class="module" x="1745" y="915" width="145" height="90" rx="10"/>
+  <text class="label" x="1818" y="952" text-anchor="middle">protein</text>
+  <text class="tiny" x="1818" y="976" text-anchor="middle">tokens P</text>
+
+  <!-- Final fusion panel -->
+  <rect class="finalPanel" x="1940" y="215" width="405" height="805" rx="20"/>
+  <text class="panelTitle" x="1975" y="258">Interaction fusion and prediction</text>
+
+  <path class="arrow" d="M1805 340 H1995"/>
+  <rect class="module" x="1995" y="295" width="175" height="90" rx="10"/>
+  <text class="label" x="2082" y="328" text-anchor="middle">drug tokens D</text>
+  <text class="tiny" x="2082" y="352" text-anchor="middle">no drug Mamba</text>
+  <rect class="tokenBlue" x="2040" y="361" width="12" height="28" rx="3"/>
+  <rect class="tokenGreen" x="2068" y="361" width="12" height="28" rx="3"/>
+  <rect class="tokenAmber" x="2096" y="361" width="12" height="28" rx="3"/>
+
+  <path class="arrow" d="M1890 960 H1925 V855 H1995"/>
+  <rect class="amber" x="1995" y="810" width="175" height="90" rx="10"/>
+  <text class="label" x="2082" y="846" text-anchor="middle">Protein-Mamba</text>
+  <text class="tiny" x="2082" y="870" text-anchor="middle">protein stream only</text>
+
+  <path class="arrow" d="M2082 385 V495"/>
+  <path class="arrow" d="M2082 810 V635"/>
+  <rect class="purple" x="1990" y="495" width="185" height="140" rx="12"/>
+  <text class="label" x="2082" y="535" text-anchor="middle">BiIntention</text>
+  <text class="tiny" x="2082" y="560" text-anchor="middle">cross-modal matching</text>
+  <g transform="translate(2038 578)">
+    <rect class="heatA" x="0" y="0" width="22" height="18"/>
+    <rect class="heatB" x="22" y="0" width="22" height="18"/>
+    <rect class="heatD" x="44" y="0" width="22" height="18"/>
+    <rect class="heatC" x="66" y="0" width="22" height="18"/>
+    <rect class="heatB" x="0" y="18" width="22" height="18"/>
+    <rect class="heatC" x="22" y="18" width="22" height="18"/>
+    <rect class="heatB" x="44" y="18" width="22" height="18"/>
+    <rect class="heatA" x="66" y="18" width="22" height="18"/>
+  </g>
+
+  <path class="arrow" d="M2175 565 H2220"/>
+  <rect class="rose" x="2220" y="525" width="90" height="80" rx="10"/>
+  <text class="label" x="2265" y="558" text-anchor="middle">MLP</text>
+  <text class="tiny" x="2265" y="582" text-anchor="middle">pair h</text>
+  <path class="arrow" d="M2265 605 V670"/>
+  <rect class="rose" x="2220" y="670" width="90" height="82" rx="10"/>
+  <text class="label" x="2265" y="702" text-anchor="middle">sigmoid</text>
+  <text class="label" x="2265" y="729" text-anchor="middle">y_hat</text>
+
+</svg>
