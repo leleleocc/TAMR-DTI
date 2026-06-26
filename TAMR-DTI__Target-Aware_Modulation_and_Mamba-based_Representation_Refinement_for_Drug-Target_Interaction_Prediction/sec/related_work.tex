@@ -1,193 +1,156 @@
 \section{Related Work}
 \label{sec:related_work}
 
-\subsection{DTI Prediction}
+\subsection{Pre-Deep-Learning DTI Methods}
 
-Computational drug-target interaction (DTI) prediction aims to reduce the
-experimental search space for identifying potential interactions between small
-molecules and therapeutic targets. Early chemogenomic studies framed DTI
-prediction as a link-prediction problem over drug and protein spaces. These
-methods exploited the observation that chemically similar drugs often bind
-functionally related proteins, and that target similarity can be inferred from
-sequence, family, or annotation evidence \citep{keiser2007relating,yamanishi2008prediction}.
-Similarity-based inference therefore used ligand similarity, target similarity,
-and known interaction profiles as the principal evidence for ranking unknown
-pairs. Kernel learning and regularized matrix-factorization methods further
-formalized this view by learning latent drug and target factors from sparse
-interaction matrices while regularizing the solution with neighborhood or
-profile similarity \citep{liu2016nrlmf,he2017simboost}. Classical machine
-learning methods, including support vector machines, random forests,
-nearest-neighbor classifiers, logistic models, and boosting-style predictors,
-were also widely used when molecular descriptors, protein features, and
-negative-sampling strategies were available \citep{cortes1995svm,breiman2001random,guo2003knn,friedman2000logistic,liu2015credible}.
-
-Network-based methods extended pairwise similarity by representing drugs,
-targets, diseases, side effects, and other biomedical entities in heterogeneous
-graphs. DTINet learns low-dimensional representations from integrated
-heterogeneous networks, NeoDTI propagates neighbor information over biomedical
-relations, and knowledge-graph recommendation models connect DTI prediction to
-large-scale relational learning \citep{luo2017dtinet,wan2019neodti,ye2021kgenfm}.
-This line of work established that relational context is valuable for DTI
-prediction, especially when direct interaction observations are sparse.
-However, similarity, matrix-factorization, and network methods are sensitive to
-curated similarity definitions, graph coverage, and the quality of observed
-biomedical links. They also tend to describe drugs and proteins at a relatively
-coarse level, which limits their ability to model pair-specific molecular
-substructures, residue-level patterns, and three-dimensional binding geometry.
+Early DTI methods cover three families that remain conceptually relevant.
+Chemogenomic and similarity-inference approaches framed DTI as a link-prediction
+problem over drug and target spaces, exploiting the heuristic that chemically
+similar drugs bind functionally related proteins
+\citep{yamanishi2008prediction,keiser2007relating}. Kernel learning and
+matrix-factorization variants formalized this view by recovering latent drug
+and target factors from sparse interaction matrices, regularized by
+neighborhood or profile similarity \citep{liu2016nrlmf,he2017simboost}.
+Heterogeneous-network methods then extended pairwise similarity to broader
+biomedical relations spanning drugs, targets, diseases, side effects, and
+knowledge graphs \citep{luo2017dtinet,wan2019neodti,ye2021kgenfm}. Classical
+machine-learning predictors, including support vector machines, random forests,
+nearest-neighbor classifiers, logistic regression, and boosting, served as
+strong baselines whenever molecular descriptors, protein features, and curated
+negatives were available
+\citep{cortes1995svm,breiman2001random,guo2003knn,friedman2000logistic,liu2015credible}.
+These methods are interpretable and data-efficient but rely on curated
+similarity definitions and coarse pairwise summaries, which limits their
+ability to capture residue-level patterns, pair-specific molecular
+substructures, or three-dimensional binding geometry.
 
 \subsection{Drug Representation}
 
-The representation of small-molecule drugs has evolved from hand-crafted
-chemical features to learned neural representations. Viewed by structural
-dimensionality, this progression can also be understood as multidimensional
-small-molecule modeling: one-dimensional SMILES sequences capture linear
-chemical syntax and substructure semantics, two-dimensional molecular graphs
-preserve atom-bond topology, and three-dimensional conformer geometry describes
-spatial arrangements relevant to binding. This 1D/2D/3D view provides the
-conceptual basis for combining molecular language, topology, and geometry in
-multimodal DTI models. Traditional
-cheminformatics pipelines use molecular descriptors to summarize physicochemical
-properties, topological indices, atom counts, charge-related quantities, and
-other structure-derived statistics \citep{todeschini2009descriptors}. Molecular
-fingerprints, including circular or extended-connectivity fingerprints, encode
-local substructure patterns into fixed-length vectors and have been widely used
-for ligand similarity search, virtual screening, and classical DTI predictors
-\citep{rogers2010ecfp}. SMILES strings provide a compact line notation for
-molecular graphs and enabled sequence-based neural encoders to treat molecules
-as token sequences \citep{weininger1988smiles}. DeepDTA demonstrated that
-convolutional encoders over SMILES and protein sequences can learn useful
-representations for binding affinity prediction without relying only on manual
-features \citep{ozturk2018deepdta}.
+Modern small-molecule encoders span the 1D, 2D, and 3D structural views of a
+ligand. The one-dimensional view treats a molecule as a token sequence:
+SMILES strings provide a compact line notation for molecular graphs
+\citep{weininger1988smiles}, molecular fingerprints such as ECFP encode local
+substructure patterns into fixed-length vectors used in classical predictors
+and similarity search \citep{rogers2010ecfp}, and broader cheminformatics
+descriptors summarize physicochemical and topological properties
+\citep{todeschini2009descriptors}. Pretrained molecular language models extend
+the 1D view through self-supervised SMILES modeling: ChemBERTa, for example,
+learns transferable chemistry features from large molecule corpora that benefit
+downstream tasks including DTI \citep{chithrananda2020chemberta}.
 
-Graph-based molecular learning addresses limitations of linear sequence
-notations by representing atoms as nodes and bonds as edges. Neural graph
-fingerprints and message-passing neural networks made molecular representation
-learning differentiable and end-to-end, allowing local atom-bond neighborhoods
-to be aggregated into task-specific molecular embeddings
-\citep{duvenaud2015graphfps,gilmer2017mpnn}. In DTI and affinity prediction,
-GraphDTA, DGraphDTA, and MGraphDTA use graph neural networks, protein contact
-maps, or multiscale graph representations to better capture molecular topology
-and its relation to target binding \citep{nguyen2021graphdta,jiang2020dgraphdta,yang2022mgraphdta}.
-More recent molecular encoders incorporate three-dimensional conformers and
-geometry-aware learning. Continuous-filter networks, equivariant graph neural
-networks, and related geometric encoders model coordinate-dependent molecular
-information while respecting rotational and translational structure
-\citep{schutt2017schnet,satorras2021egnn}. These advances strengthen drug-side
-representation, but molecular encoders often summarize candidate conformations
-before the paired protein contributes explicit contextual information.
+Two-dimensional graph encoders replace linear notations with explicit
+atom-bond topology. Neural graph fingerprints and message-passing networks made
+molecular representation learning differentiable and end-to-end
+\citep{duvenaud2015graphfps,gilmer2017mpnn}, and DTI-specific graph models such
+as GraphDTA, DGraphDTA, and MGraphDTA exploit molecular topology, protein
+contact maps, or multiscale graph representations to better capture chemical
+neighborhoods and their relation to binding
+\citep{nguyen2021graphdta,jiang2020dgraphdta,yang2022mgraphdta}.
+
+Three-dimensional encoders introduce binding-relevant geometry. Continuous-filter
+networks such as SchNet model coordinate-dependent molecular signals
+\citep{schutt2017schnet}, and equivariant graph neural networks (EGNN) capture
+the rotational and translational structure of conformer atoms with low overhead
+\citep{satorras2021egnn}. Existing multimodal DTI pipelines that include a 3D
+branch typically aggregate candidate conformers as a drug-side property
+\citep{satorras2021egnn,ji2026ldmdti}, so the same ligand contributes the same
+geometric summary regardless of which protein it is paired with --- a design
+choice that we revisit in Section~\ref{sec:methodology}.
 
 \subsection{Protein Representation}
 
-Protein targets are biological macromolecules whose function is determined by
-amino-acid sequence, local motifs, domains, family membership, structural
-constraints, and functional sites. In DTI prediction, a protein sequence can
-indicate residue composition and evolutionary conservation, motifs can mark
-short functional or binding patterns, domains capture reusable structural and
-functional units, and protein-family annotations provide higher-level evidence
-about related targets. Traditional feature engineering therefore used amino-acid
-composition, dipeptide composition, pseudo-amino-acid composition,
-composition-transition-distribution descriptors, sequence similarity, and
-position-specific scoring matrices derived from sequence search
-\citep{chou2001pseaac,dubchak1995global,altschul1997psiblast}. Domain and
-functional annotations also became important protein-side features, with Pfam
-supporting family/domain assignment and Gene Ontology providing structured
-functional annotation \citep{finn2014pfam,ashburner2000go}. These features are
-biologically interpretable and useful in data-scarce settings, but they depend
-on external annotation quality and may miss fine-grained residue dependencies
-that are not captured by fixed descriptors.
-
-Deep learning shifted protein representation from static descriptors to learned
-sequence encoders. Convolutional models capture local residue motifs and
-short-range patterns, recurrent models process ordered residue sequences, and
-Transformer-based architectures model longer-range dependencies through
-self-attention. DeepConv-DTI emphasized convolution over protein sequences,
-DeepAffinity combined recurrent and convolutional encoders for compound-protein
-affinity modeling, and sequence-based DTI models such as TransformerCPI showed
-that attention can improve compound-protein interaction prediction
-\citep{lee2019deepconv,karimi2019deepaffinity,chen2020transformercpi}.
-Protein language models further broadened this direction by pretraining on
-large protein-sequence corpora. ProtTrans and ProtBERT learn contextual protein
-representations from self-supervised sequence modeling, while ESM shows that
-large-scale unsupervised learning can encode structural and functional signals
-from protein sequences \citep{elnaggar2021prottrans,rives2021esm}. These models
-provide strong general-purpose target embeddings, but their representations are
-usually learned from protein sequence distributions before a specific drug
-partner is considered.
-Recent language-model-based DTI methods further use protein language space as a
-pair-level modeling substrate. ConPLex learns contrastive drug-protein
-co-embeddings in protein language space, and DLM-DTI combines dual language
-models with hint-based learning for DTI prediction
-\citep{singh2023complex,lee2024dlmdti}. These studies reinforce the value of
-pretrained sequence representations, while also highlighting the need to model
-the paired drug context rather than relying only on target embeddings learned in
-isolation.
+Protein-side modeling has shifted from hand-crafted descriptors to pretrained
+sequence encoders. Traditional features such as pseudo-amino-acid composition,
+sequence-similarity scores from BLAST-derived profiles, and domain or
+functional annotations from Pfam and Gene Ontology provide biologically
+interpretable signals, although they tend to miss fine-grained residue
+dependencies that are not captured by fixed descriptors
+\citep{chou2001pseaac,altschul1997psiblast,finn2014pfam,ashburner2000go,dubchak1995global}.
+Deep learning then introduced learned encoders: convolutional and recurrent
+networks capture local residue motifs and short-range dependencies
+\citep{lee2019deepconv,karimi2019deepaffinity}, while Transformer-style
+architectures model longer-range residue interactions through self-attention
+\citep{chen2020transformercpi}. Protein language models broadened this
+direction by pretraining on large protein corpora: ProtTrans and ProtBERT
+learn contextual residue embeddings from self-supervised sequence modeling,
+and ESM shows that scaled unsupervised learning recovers structural and
+functional signals from sequence alone
+\citep{elnaggar2021prottrans,rives2021esm}. Pair-level extensions further use
+protein language space as the modeling substrate itself: ConPLex aligns drug
+and protein embeddings in a shared contrastive space, and DLM-DTI combines
+dual language models with a teacher-student hint mechanism that injects
+target-aware signal into a smaller student
+\citep{singh2023complex,lee2024dlmdti}. These backbones supply strong
+general-purpose target embeddings; they are nevertheless learned independently
+of the specific drug partner that will be considered downstream, which leaves
+pair-specific protein modulation to later stages of the pipeline.
 
 \subsection{Interaction Modeling}
 
-After obtaining drug and protein representations, DTI models must determine
-whether the two modalities are compatible. A common strategy is feature
-concatenation: a drug embedding and a protein embedding are independently
-computed, concatenated, and passed to a multilayer predictor. This design is
-simple and compatible with many encoders, but it leaves the interaction function
-to infer cross-modal compatibility from compact global vectors. To improve
-pair-specific modeling, attention and co-attention mechanisms align molecular
-substructures with protein residues or sequence segments. TransformerCPI uses
-self-attention for compound-protein interaction prediction, MolTrans learns
-substructure-level interaction patterns between molecular and protein tokens,
-and IIFDTI separates independent and interactive features through an attention
-mechanism \citep{chen2020transformercpi,huang2021moltrans,cheng2022iifdti}.
+After per-modality encoders, a DTI model must decide compatibility between drug
+and target representations. The simplest design --- concatenation of unimodal
+embeddings before an MLP head --- is broadly compatible across encoders but
+offloads all cross-modal reasoning onto compressed global vectors. Attention
+modules sharpen this by aligning compound substructures with protein residues:
+TransformerCPI applies sequence self-attention to compound-protein pairs
+\citep{chen2020transformercpi}, MolTrans learns substructure-level interactions
+between drug and protein tokens with Transformer and convolutional modules
+\citep{huang2021moltrans}, and IIFDTI separates pair-specific (interactive) and
+modality-specific (independent) features through an attention design
+\citep{cheng2022iifdti}. Bilinear and bidirectional models raise the resolution
+of cross-modal matching further: DrugBAN uses bilinear attention to capture
+interpretable drug-target associations and add domain adaptation across
+distributions \citep{bai2023drugban}, and BINDTI combines a convolution-attention
+hybrid (ACmix) protein encoder with bidirectional multi-head attention that
+explicitly models drug-to-protein and protein-to-drug intention streams
+\citep{peng2024bindti}. Cross-attention frameworks such as MFCADTI integrate
+multiple feature views before prediction \citep{quan2025mfcadti}, while
+interaction-fingerprint methods rethink how pairwise evidence is represented:
+PSICHIC learns hierarchical protein-ligand interaction fingerprints that
+incorporate physicochemical channel information
+\citep{koh2024psichic}, and BarlowDTI uses a Barlow-Twins-style self-supervised
+objective to learn modern one-dimensional DTI representations under stronger
+split and representation controls \citep{schuh2025barlowdti}. Attention-based
+interaction modules have therefore moved DTI prediction beyond late
+concatenation; most current designs still perform pair-specific reasoning only
+after independent unimodal encoders have compressed their inputs, however,
+which can discard substructure-level or residue-level evidence that a more
+deeply coupled design would preserve.
 
-Bilinear and bidirectional interaction models further increase the resolution of
-cross-modal matching. DrugBAN uses a bilinear attention network to capture
-interpretable drug-target associations and improve transfer across domains,
-while BINDTI applies bidirectional attention to model mutual interaction
-intentions between drugs and targets \citep{bai2023drugban,peng2024bindti}.
-Cross-attention frameworks such as MFCADTI integrate multiple feature sources
-before prediction and show that interaction modeling benefits from both
-within-modality representation quality and between-modality alignment
-\citep{quan2025mfcadti}. More recent interaction-centered methods also revisit
-how pairwise evidence is represented: PSICHIC learns protein-ligand interaction
-fingerprints from sequence-derived information, and BarlowDTI studies modern
-one-dimensional DTI prediction with stronger split and representation controls
-\citep{koh2024psichic,schuh2025barlowdti}. Overall, attention-based interaction modules have
-moved DTI prediction beyond late concatenation. A remaining limitation is that
-many models still perform most pair-specific reasoning only after unimodal drug
-and protein encoders have already compressed their inputs, which can discard
-substructure- or residue-level evidence that would be useful for interaction
-discrimination.
+\subsection{Multimodal DTI Systems and Positioning of TAMR-DTI}
 
-\subsection{Multimodal DTI Models}
+Multimodal frameworks combine the representational threads above rather than
+choose a single one. LDM-DTI integrates pretrained drug and protein language
+features with graph topology, equivariant geometric encoders, and a dynamic
+bidirectional interaction module \citep{ji2026ldmdti}. DrugLAMP couples
+pretrained biochemical representations with a multi-attention pooling head
+designed for transferable DTI prediction across data distributions
+\citep{luo2024druglamp}. GEFormerDTA fuses graph-structured atom features with
+a Transformer encoder through early-fusion blocks for binding-affinity
+prediction \citep{liu2024geformerdta}. EviDTI adds an evidential learning
+output head on top of a multimodal DTI backbone to quantify predictive
+uncertainty alongside binary prediction \citep{zhao2025evidti}. Beyond pretrained
+graph models, the rapid progress of protein structure prediction has further
+made predicted three-dimensional protein structure an accessible resource for
+downstream target modeling \citep{jumper2021alphafold}, although the present
+work focuses on sequence-derived protein representations to remain comparable
+with existing BiIntention-style benchmarks.
 
-Recent DTI systems increasingly combine language-model features, graph topology,
-three-dimensional molecular geometry, protein structural information, and
-cross-modal fusion. Molecular language models such as ChemBERTa provide
-self-supervised drug sequence features, whereas protein language models such as
-ProtTrans and ESM provide target embeddings learned from large biological
-sequence corpora \citep{chithrananda2020chemberta,elnaggar2021prottrans,rives2021esm}.
-GraphDTA and its successors incorporate molecular graph topology, and
-structure-aware methods exploit protein contact maps, multiscale graphs, or
-geometry-aware molecular encoders to represent structural constraints more
-explicitly \citep{nguyen2021graphdta,jiang2020dgraphdta,yang2022mgraphdta,satorras2021egnn}.
-The rapid progress of protein structure prediction has also made predicted
-protein structures a more accessible resource for downstream target modeling
-\citep{jumper2021alphafold}.
-
-Multimodal DTI frameworks seek to combine these complementary views rather than
-choose a single representation. LDM-DTI integrates pretrained language-model
-features with graph convolutional and equivariant geometric encoders before
-dynamic interaction attention \citep{ji2026ldmdti}. DrugLAMP emphasizes
-transferable prediction through pretrained biochemical representations,
-GEFormerDTA studies transformer graph early fusion for affinity prediction,
-BiMA-DTI explores a Mamba-Attention hybrid for DTI prediction, and EviDTI
-introduces evidential learning to quantify predictive uncertainty
-under multimodal DTI modeling
-\citep{luo2024druglamp,liu2024geformerdta,shui2025bimadti,zhao2025evidti}. These trends show a
-clear progression from manually designed similarity and network features toward
-learned molecular and protein representations, and then toward multimodal
-interaction modeling. Nevertheless, a general research gap remains: many
-current pipelines still encode the drug and protein largely independently and
-perform fusion only at a relatively late stage. As DTI models incorporate
-sequence semantics, graph topology, conformer geometry, and protein functional
-context, an important open direction is to make representation learning itself
-more interaction-aware while preserving the distinct biological and chemical
-structure of each modality.
+Most directly related to our protein-side use of state-space modeling, BiMA-DTI
+explores a Mamba-Attention hybrid for DTI prediction in which Mamba and
+self-attention blocks alternate to model long-range dependencies on both drug
+and protein streams \citep{shui2025bimadti}. TAMR-DTI differs from this hybrid
+in two ways. First, the protein-side Mamba refinement is applied only to the
+ordered protein token stream, so that drug tokens --- which do not carry a
+biologically meaningful linear order --- are not subjected to artificial
+sequential dynamics. Second, the bidirectional drug-target matching head
+(BiIntention) is preserved as a separate component rather than blended with the
+state-space block, so that explicit cross-modal matching and long-range
+sequence refinement are not entangled in a single fusion stage. In the main
+benchmark comparison in Section~\ref{sec:experiments}, we report GraphDTA,
+DrugBAN, IIFDTI, BINDTI, TransformerCPI, MolTrans, and LDM-DTI as the closest
+published baselines for which protocols, splits, and reported metrics are
+directly compatible with our repeated-seed evaluation; the other methods
+discussed above use different splits, evaluation protocols, or unavailable
+training code, which prevents like-for-like reproduction under the same
+protocol and limits them to contextual discussion.

@@ -1,6 +1,0 @@
-label,short,source,auroc,auprc,acc_05,f1_05
-Full,Full,outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42/best_metrics.txt,0.9331580775420707,0.937199495592799,0.8618241398143092,0.8641489171290496
-w/o Target-aware Conformer,w/o TCM,swanlog/stage2-ablation-final-without-target-aware-conformer-module-biosnap-seed42/run-20260519_171627-ese1yh2mey1vn6hrhyt57/backup.swanlab,0.9162521906973907,0.921614371047371,0.8439832514108866,0.8449430070562692
-w/o Protein FiLM,w/o FiLM,swanlog/stage2-ablation-final-without-ligand-conditioned-protein-film-biosnap-seed42/run-20260519_154218-p83ay6azqf1m0lfnj1lv1/backup.swanlab,0.9197720216458136,0.9244110495779705,0.8423448024758784,0.8438514244500541
-w/o Protein Mamba,w/o Mamba,swanlog/stage2-ablation-final-without-protein-mamba-refinement-biosnap-seed42/run-20260519_161048-vki3l4lxqw6a6k9pq1gvo/backup.swanlab,0.9176834684208153,0.9247783093088036,0.8421627525942108,0.8445400753093061
-w/o Bidirectional Modulation,w/o BiMod,swanlog/stage2-ablation-final-without-bidirectional-modulation-biosnap-seed42/run-20260519_151637-wvbneziw3kjzl3486m0i5/backup.swanlab,0.9201967054032343,0.9258442188859111,0.8479883488075732,0.848539814982768

@@ -1,7 +1,0 @@
-label,short,effective_conformers,target_aware,best_epoch,stop_epoch,runtime_s,threshold,source,auroc,auprc,acc_05,f1_05
-n=1 target-aware,n=1,1,True,46,,2878.3,0.52,swanlog/stage2-comparative-conformer-n1-biosnap-seed42/run-20260520_144909-zgoc5dce5zewzu6m9ah8c/backup.swanlab,0.9277038044558984,0.9297136174366729,0.8578190424176224,0.8590507128677134
-n=2 target-aware,n=2,2,True,68,,4991.87,0.76,swanlog/stage2-comparative-conformer-n2-biosnap-seed42/run-20260520_153746-xxn11vkbi6ukvo5rzdsiy/backup.swanlab,0.9300221654828285,0.9321866544184035,0.8574549426542872,0.8604526822313313
-n=4 target-aware,n=4,4,True,46,,2737.17,0.67,swanlog/stage2-comparative-conformer-n4-biosnap-seed42/run-20260520_170135-vk66c8lur2vpf60clyeao/backup.swanlab,0.9297463563499071,0.9345323322099305,0.8523575459675952,0.854215351429085
-n=8 target-aware,n=8,8,True,51,,4358.34,0.87,swanlog/stage2-comparative-conformer-n8-biosnap-seed42/run-20260520_174748-j8xl3jqhxa8csr52lbift/backup.swanlab,0.9322343389993186,0.93557960297654,0.8574549426542872,0.8623659694146598
-n=16 target-aware,n=16,16,True,62,,7186.66,0.77,swanlog/stage2-comparative-conformer-n16-biosnap-seed42/run-20260528_171325-9dpubxcxpp0d94vi38kos/backup.swanlab,0.9311714696298418,0.9326059995917225,0.8630984889859822,0.8668083599008147
-n=8 uniform average,avg,8,False,64,,3214.71,0.54,swanlog/stage2-comparative-conformer-avg-biosnap-seed42/run-20260520_190102-ps9zmhk0s42arj18na8la/backup.swanlab,0.9307522211881865,0.9340233852212311,0.8589113417076278,0.861582425433113

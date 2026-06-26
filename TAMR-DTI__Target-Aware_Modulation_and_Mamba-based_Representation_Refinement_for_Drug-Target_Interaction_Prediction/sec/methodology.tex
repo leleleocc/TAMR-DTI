@@ -10,11 +10,16 @@ label $y\in\{0,1\}$ indicating whether the pair interacts, the model learns a
 scoring function $f_{\theta}$ that estimates the interaction probability:
 \begin{equation}
   s = f_{\theta}(D,T), \qquad
-  \hat{y} = p_{\theta}(y=1\mid D,T)=\sigma(s),
+  p = \sigma(s)
+  = p_{\theta}(y=1\mid D,T),
+  \qquad
+  \hat{y} = \mathbf{1}[p\!\ge\!\tau],
   \label{eq:dti_prediction}
 \end{equation}
-where $s$ is the prediction logit, $\sigma(\cdot)$ is the sigmoid function, and
-$\theta$ denotes all trainable parameters. For a mini-batch
+where $s$ is the prediction logit, $\sigma(\cdot)$ is the sigmoid function,
+$p\in[0,1]$ is the predicted binding probability, $\tau$ is a
+validation-selected decision threshold, $\hat{y}\in\{0,1\}$ is the predicted
+binary label, and $\theta$ denotes all trainable parameters. For a mini-batch
 $\mathcal{B}=\{(D_i,T_i,y_i)\}_{i=1}^{B}$, the learning objective is to assign
 larger logits to interacting pairs and smaller logits to non-interacting pairs.
 
@@ -43,7 +48,7 @@ Figure~\ref{fig:drug_preprocess} summarizes how each SMILES string is converted
 into the three drug views used by TAMR-DTI. For the 1D semantic view, the SMILES
 string is tokenized and encoded by a frozen ChemBERTa-77M-MTR model; after
 removing special tokens, the hidden states are adaptively pooled to a fixed
-matrix $\mathbf{X}^{1D}\in\mathbb{R}^{354\times128}$. For the 2D topological
+matrix $\mathbf{d}_{1D}\in\mathbb{R}^{354\times128}$. For the 2D topological
 view, RDKit parses atoms and bonds from the same SMILES string, and canonical
 atom and bond featurizers construct a molecular graph with node features, edge
 features, and adjacency information. For the 3D geometric view, hydrogens are
@@ -77,20 +82,47 @@ context reweights drug conformers, making geometric aggregation target
 conditioned. A gated Mamba residual block is then applied only to the ordered
 protein token stream before BiIntention \citep{gu2022s4,gu2023mamba}.
 
-Figure~\ref{fig:tamr_dti_architecture} shows the TAMR-DTI architecture,
-including the three drug streams, the target-aware conformer
-weighting path, ligand-conditioned protein encoding, protein-side Mamba
-refinement, BiIntention-based cross-modal matching, and final interaction
-prediction.
+The architecture, illustrated in Figure~\ref{fig:tamr_dti_architecture} and
+formalised in Eq.~\ref{eq:overall_pipeline}, is organised into four functional
+groups. The drug encoder combines three molecular views --- ChemBERTa
+semantics $\mathbf{d}_{1D}$, a GCN over the 2D graph $\mathcal{G}_D$, and
+EGNN-encoded conformer tokens --- and merges them via per-conformer
+target-aware weights $\alpha_k$ and a token-wise gate into the fused drug
+tokens $\mathbf{D}$, whose mean pool $\mathbf{d}_g$ serves as the ligand
+context. The protein encoder projects ProtBERT residue features into seed
+tokens $\mathbf{P}^{0}$ and applies three ACmix--FeedForward blocks under
+ligand-conditioned FiLM modulation
+$(\gamma,\beta)\!=\!\operatorname{MLP}(\mathbf{d}_g)$, producing the protein
+tokens $\mathbf{P}$. A bidirectional Mamba block refines $\mathbf{P}$ through
+a learned scalar gate $g\!\in\!(0,1)$, giving the refined tokens
+$\mathbf{P}'\!=\!(1{-}g)\mathbf{P}+g\,\mathrm{SSM}(\mathbf{P})$. The matching
+head couples $\mathbf{D}$ and
+$\mathbf{P}'$ through BiIntention bidirectional cross-attention, max-pools and
+concatenates the result into the joint representation $\mathbf{f}$, and a
+four-layer MLP decodes $\mathbf{f}$ into the binding probability
+$p\!=\!\sigma(\mathrm{MLP}(\mathbf{f}))$ with prediction
+$\hat{y}\!=\!\mathbf{1}[p\!\ge\!\tau]$ at a validation-selected threshold
+$\tau$.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/tamr_dti_architecture_v6_imagegen_raw.png}
-\caption{TAMR-DTI architecture. The model integrates SMILES
-semantics, molecular topology, and target-aware conformer geometry on the drug
-side; uses ligand-conditioned FiLM and protein-side Mamba refinement on the
-protein side; and performs final drug-target matching through BiIntention before
-MLP-based interaction prediction.}
+\includegraphics[width=\linewidth]{figures/tamr_dti_architecture.pdf}
+\caption{TAMR-DTI architecture. Abbreviations:
+$\mathbf{d}_{1D}$ ChemBERTa 1D semantics;
+$\mathbf{d}_{\text{geo}}$ target-aware geometry tokens;
+$\mathbf{D}$ fused drug tokens;
+$\mathbf{d}_g$ ligand context;
+$\mathbf{P}^{0}$ ProtBERT seed tokens;
+$\mathbf{P}_g$ protein seed context;
+$\mathbf{P}$ protein tokens after ACmix--FiLM;
+$\mathbf{P}'$ Mamba-refined protein tokens;
+$\mathbf{f}$ joint pair representation;
+$\alpha_k$ per-conformer weight;
+$(\gamma,\beta)$ FiLM affine parameters;
+$g$ scalar Mamba gate;
+$\tau$ validation-selected decision threshold.
+Glyphs: $\boldsymbol{\times}$ multiplication, $\odot$ element-wise product,
+$\sigma$ sigmoid, ``$\times 3$'' a block stacked three times.}
 \label{fig:tamr_dti_architecture}
 \end{figure}
 
@@ -99,7 +131,7 @@ The computation is
 \begin{aligned}
   \mathbf{D} &=
   \operatorname{DrugEnc}\!\left(
-    \mathbf{X}^{1D},\mathcal{G}_D,
+    \mathbf{d}_{1D},\mathcal{G}_D,
     \{\mathbf{F}_k,\mathbf{R}_k,\epsilon_k,q_k\}_{k=1}^{K},
     \mathbf{P}^{0},\mathbf{m}
   \right), \\
@@ -108,24 +140,24 @@ The computation is
   \mathbf{P} &= \operatorname{ProtEnc}\!\left(
     \mathbf{P}^{0},\mathbf{m},\mathbf{d}_g
   \right),\\
-  \tilde{\mathbf{P}} &=
+  \mathbf{P}' &=
   \operatorname{ProtMamba}(\mathbf{P},\mathbf{m}),\\
-  \mathbf{h} &= \operatorname{BiIntention}(\mathbf{D},\tilde{\mathbf{P}}),\\
-  s &= \operatorname{MLP}(\mathbf{h}), \qquad
-  \hat{y}=\sigma(s).
+  \mathbf{f} &= \operatorname{BiIntention}(\mathbf{D},\mathbf{P}'),\\
+  s &= \operatorname{MLP}(\mathbf{f}), \qquad
+  p=\sigma(s).
 \end{aligned}
 \label{eq:overall_pipeline}
 \end{equation}
-Here $\mathbf{X}^{1D}\in\mathbb{R}^{L_d\times d}$ denotes the ChemBERTa drug
+Here $\mathbf{d}_{1D}\in\mathbb{R}^{L_d\times d}$ denotes the ChemBERTa drug
 feature sequence, $\mathcal{G}_D$ is the molecular graph,
 $(\mathbf{F}_k,\mathbf{R}_k)$ are the atom features and coordinates of conformer
 $k$, $\epsilon_k$ is its conformer energy, and $q_k\in\{0,1\}$ marks whether the
 conformer is valid. $\mathbf{P}^{0}$ is the projected ProtBERT protein feature,
 $\mathbf{D}\in\mathbb{R}^{L_d\times d}$ is the fused drug token sequence,
 $\mathbf{P}\in\mathbb{R}^{L_p\times d}$ is the ligand-conditioned protein token
-sequence before protein-side Mamba refinement, $\tilde{\mathbf{P}}$ is the
+sequence before protein-side Mamba refinement, $\mathbf{P}'$ is the
 refined protein token sequence, $\mathbf{d}_g$ is the global ligand context used
-for ligand-conditioned protein encoding, and $\mathbf{h}\in\mathbb{R}^{2d}$ is
+for ligand-conditioned protein encoding, and $\mathbf{f}\in\mathbb{R}^{2d}$ is
 the fused pair representation. The projected protein sequence first guides
 conformer aggregation, and the resulting drug representation then provides
 ligand context for protein encoding before final cross-modal matching.
@@ -264,13 +296,13 @@ for the ligand alone.
 \paragraph{Drug fusion.}
 The graph topology tokens and target-aware 3D tokens are concatenated:
 \begin{equation}
-  \mathbf{X}^{geo} =
+  \mathbf{d}_{\text{geo}} =
   [\mathbf{H}^{g};\mathbf{Z}^{3D}]
   \in\mathbb{R}^{(N_g+N_c)\times d}.
   \label{eq:geo_concat}
 \end{equation}
 This sequence has the same length as the cached ChemBERTa feature sequence
-$\mathbf{X}^{1D}\in\mathbb{R}^{L_d\times d}$. In preprocessing, the
+$\mathbf{d}_{1D}\in\mathbb{R}^{L_d\times d}$. In preprocessing, the
 ChemBERTa hidden states are mapped to the same fixed drug-token length
 $L_d=354$ used by the structural branch. Therefore, the fusion gate should be
 understood as a fixed latent-slot operation over two equal-length drug
@@ -279,19 +311,19 @@ chemical alignment between a SMILES token and a graph atom. Both branches are
 normalized and combined by a slot-wise, channel-wise gate:
 \begin{equation}
 \begin{aligned}
-  \tilde{\mathbf{X}}^{1D}
-  &= \operatorname{LayerNorm}(\mathbf{X}^{1D}),\\
-  \tilde{\mathbf{X}}^{geo}
-  &= \operatorname{LayerNorm}(\mathbf{X}^{geo}),\\
+  \tilde{\mathbf{d}}_{1D}
+  &= \operatorname{LayerNorm}(\mathbf{d}_{1D}),\\
+  \tilde{\mathbf{d}}_{\text{geo}}
+  &= \operatorname{LayerNorm}(\mathbf{d}_{\text{geo}}),\\
   \mathbf{G}^{D}
   &= \sigma\!\left(
       \mathbf{W}_{f}
-      [\tilde{\mathbf{X}}^{1D};\tilde{\mathbf{X}}^{geo}]
+      [\tilde{\mathbf{d}}_{1D};\tilde{\mathbf{d}}_{\text{geo}}]
       +\mathbf{b}_{f}
     \right),\\
   \mathbf{D}
-  &= \mathbf{G}^{D}\odot\tilde{\mathbf{X}}^{1D}
-   + (1-\mathbf{G}^{D})\odot\tilde{\mathbf{X}}^{geo}.
+  &= \mathbf{G}^{D}\odot\tilde{\mathbf{d}}_{1D}
+   + (1-\mathbf{G}^{D})\odot\tilde{\mathbf{d}}_{\text{geo}}.
 \end{aligned}
 \label{eq:drug_gate}
 \end{equation}
@@ -310,8 +342,9 @@ protein module is
 \label{sec:protein_representation_module}
 
 The protein encoder maps ProtBERT residue features into ligand-conditioned
-protein tokens. ProtBERT provides residue-level sequence priors, and the FiLM
-path lets the paired ligand modulate these tokens before cross-modal fusion.
+protein tokens. ProtBERT provides residue-level sequence priors, and the
+Feature-wise Linear Modulation (FiLM) path \citep{perez2018film} lets the paired
+ligand modulate these tokens before cross-modal fusion.
 
 The input protein sequence is first mapped from the ProtBERT dimension to the
 shared hidden dimension using Eq.~\ref{eq:protein_seed_projection}. The projected
@@ -467,13 +500,13 @@ The block then uses residual and feed-forward updates:
 A scalar gate controls how much of the refined protein representation is
 injected:
 \begin{equation}
-  \tau = \sigma(\eta),\qquad
-  \tilde{\mathbf{P}}
+  g = \sigma(\eta),\qquad
+  \mathbf{P}'
   =
-  \mathbf{P}+\tau(\mathbf{P}^{m}-\mathbf{P}).
+  \mathbf{P}+g\,(\mathbf{P}^{m}-\mathbf{P}).
   \label{eq:mamba_gate}
 \end{equation}
-The gate logit is initialized as $\eta=-2.0$, giving $\tau\approx0.119$. The
+The gate logit is initialized as $\eta=-2.0$, giving $g\approx0.119$. The
 mask is applied inside the Mamba residual block; the subsequent BiIntention
 module receives the resulting fixed-length protein token sequence.
 
@@ -483,7 +516,7 @@ drug-protein compatibility. Self-attention is first applied independently to
 each modality:
 \begin{equation}
   \mathbf{D}^{s}=\operatorname{SA}_{D}(\mathbf{D}),\qquad
-  \mathbf{P}^{s}=\operatorname{SA}_{P}(\tilde{\mathbf{P}}),
+  \mathbf{P}^{s}=\operatorname{SA}_{P}(\mathbf{P}'),
   \label{eq:bi_self_attention}
 \end{equation}
 where each self-attention module includes a residual connection. The intention
@@ -545,11 +578,11 @@ they are compact bidirectional interaction representations from which the
 drug-side and protein-side pair features are pooled. The implementation applies
 max pooling over the final fixed-length BiIntention tensors:
 \begin{equation}
-  \mathbf{h}_{d} =
+  \mathbf{f}_{d} =
   \operatorname{MaxPool}(\mathbf{D}^{(L)}),\qquad
-  \mathbf{h}_{p} =
+  \mathbf{f}_{p} =
   \operatorname{MaxPool}(\mathbf{P}^{(L)}),\qquad
-  \mathbf{h}=[\mathbf{h}_{d};\mathbf{h}_{p}]
+  \mathbf{f}=[\mathbf{f}_{d};\mathbf{f}_{p}]
   \in\mathbb{R}^{2d}.
   \label{eq:fusion_pooling}
 \end{equation}
@@ -558,7 +591,7 @@ max pooling over the final fixed-length BiIntention tensors:
 \label{sec:prediction_module}
 
 The prediction head maps the fused pair representation
-$\mathbf{h}\in\mathbb{R}^{256}$ to a scalar interaction logit. It is implemented
+$\mathbf{f}\in\mathbb{R}^{256}$ to a scalar interaction logit. It is implemented
 as a four-layer MLP with layer normalization after the first three hidden
 transformations:
 \begin{equation}
@@ -567,7 +600,7 @@ transformations:
   &=
   \operatorname{LayerNorm}
   \left(
-    \operatorname{ReLU}(\mathbf{W}_{1}\mathbf{h}+\mathbf{b}_{1})
+    \operatorname{ReLU}(\mathbf{W}_{1}\mathbf{f}+\mathbf{b}_{1})
   \right),
   &&
   \mathbf{z}_{1}\in\mathbb{R}^{256},\\
@@ -601,15 +634,16 @@ Eq.~\ref{eq:dti_prediction}.
 
 The active training objective is weighted binary cross-entropy with logits.
 For sample $i$, let $s_i$ be the model logit and
-$\hat{y}_i=\sigma(s_i)$. The mini-batch loss is
+$p_i=\sigma(s_i)$ the corresponding predicted probability. The mini-batch loss
+is
 \begin{equation}
   \mathcal{L}_{BCE}
   =
   -\frac{1}{B}
   \sum_{i=1}^{B}
   \left[
-    w_{+}y_i\log\hat{y}_i
-    +(1-y_i)\log(1-\hat{y}_i)
+    w_{+}y_i\log p_i
+    +(1-y_i)\log(1-p_i)
   \right],
   \label{eq:weighted_bce}
 \end{equation}
