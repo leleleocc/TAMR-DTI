@@ -419,42 +419,62 @@ protein module outputs
   \label{eq:protein_output}
 \end{equation}
 
-\subsection{Alignment and Masks}
+\subsection{Feature Alignment and Masking}
 \label{sec:feature_encoder_module}
 
-The encoders produce cached features with different dimensions and scales.
-Before fusion, ChemBERTa features, atom descriptors, conformer features, and
-ProtBERT residue features are mapped into a shared hidden space.
+The preceding encoder modules operate on heterogeneous inputs: cached
+ChemBERTa tokens, RDKit atom descriptors, EGNN conformer tokens, and ProtBERT
+residue embeddings. Before the fusion module can compare drug and protein
+tokens, TAMR-DTI converts these streams into a shared tensor interface with a
+common hidden dimension, fixed drug-token length, and explicit validity masks.
+This interface is an implementation contract between the modality-specific
+encoders and the interaction module.
 
-TAMR-DTI uses three alignment operations. First, all active streams are mapped
-to the same hidden dimension $d=128$:
+First, the active streams are aligned to the shared dimension $d=128$:
 \begin{equation}
   \psi_{1D}:\mathbb{R}^{128}\rightarrow\mathbb{R}^{128},\qquad
   \psi_{g}:\mathbb{R}^{75}\rightarrow\mathbb{R}^{128},\qquad
   \psi_{p}:\mathbb{R}^{1024}\rightarrow\mathbb{R}^{128}.
   \label{eq:feature_projection}
 \end{equation}
-Here $\psi_{1D}$ is implemented as layer normalization over the cached
-ChemBERTa sequence, $\psi_g$ is the graph input projection in
-Eq.~\ref{eq:gcn_projection}, and $\psi_p$ is the ProtBERT projection in
-Eq.~\ref{eq:protein_seed_projection}. Second, masks are used at the stages where
-the implementation explicitly supports them. The protein mask $\mathbf{m}$ is
-used in masked mean pooling, relative self-attention inside the protein encoder,
-and protein-side Mamba refinement. The final BiIntention block operates on the
-fixed-length protein token sequence produced by the protein encoder. The
-conformer validity mask $\mathbf{q}=(q_1,\ldots,q_K)$ prevents invalid
-conformers from receiving probability mass in Eq.~\ref{eq:conformer_weight}.
-Third, pair-level context vectors are constructed by pooling aligned tokens:
+Here $\psi_{1D}$ is the layer normalization applied to the cached ChemBERTa
+sequence, $\psi_g$ is the graph input projection in
+Eq.~\ref{eq:gcn_projection}, and $\psi_p$ is the LayerNorm-linear projection of
+ProtBERT features in Eq.~\ref{eq:protein_seed_projection}. The conformer atom
+features are prepared in the same hidden dimension and then updated by the EGNN.
+After the GCN and target-aware conformer branches, the structural drug sequence
+has length $N_g+N_c=290+64=354$, matching the cached ChemBERTa sequence. The
+drug fusion gate therefore acts on paired latent slots of equal length, rather
+than on an assumed one-to-one correspondence between SMILES tokens and graph
+atoms.
+
+Second, TAMR-DTI constructs pair-level contexts in a fixed order. The projected
+protein seed tokens are pooled with the residue mask to form the target context
+used for conformer selection. After the target-aware drug tokens are fused, their
+unmasked mean becomes the ligand context used by FiLM in the protein encoder:
 \begin{equation}
-  \mathbf{d}_g =
-  \operatorname{mean}(\mathbf{D}), \qquad
   \mathbf{p}_g =
-  \operatorname{MaskedMean}(\mathbf{P}^{0},\mathbf{m}).
+  \operatorname{MaskedMean}(\mathbf{P}^{0},\mathbf{m}),
+  \qquad
+  \mathbf{d}_g =
+  \operatorname{MeanPool}(\mathbf{D}).
   \label{eq:feature_contexts}
 \end{equation}
-The aligned interface is
-$\{\mathbf{D},\mathbf{P},\mathbf{m},\boldsymbol{\alpha}\}$, where
-$\boldsymbol{\alpha}$ records the target-aware conformer weights.
+This ordering implements the two target-aware paths in the model: protein
+context first selects ligand conformers, and the resulting ligand context then
+modulates protein residues.
+
+Third, masks are applied only at stages where the corresponding operation is
+mask-aware in the implementation. The conformer validity mask
+$\mathbf{q}=(q_1,\ldots,q_K)$ prevents invalid conformers from receiving
+probability mass in Eq.~\ref{eq:conformer_weight}. The protein mask
+$\mathbf{m}$ is used in masked mean pooling, relative self-attention inside the
+protein encoder, and protein-side Mamba refinement. The final BiIntention module
+then receives the fixed-length protein token sequence produced by these masked
+upstream operations. Thus, the aligned interface entering the fusion stage is
+$\{\mathbf{D},\mathbf{P},\mathbf{m}\}$, while
+$\boldsymbol{\alpha}$ is retained as an auxiliary record of the target-aware
+conformer weights for analysis.
 
 \subsection{Fusion}
 \label{sec:feature_fusion_module}

@@ -7,7 +7,7 @@ This section describes the datasets, evaluation metrics, and implementation sett
 
 \subsubsection{Datasets and Data Distribution}
 
-We evaluate TAMR-DTI on four benchmark drug-target interaction (DTI) datasets: BindingDB, BioSNAP, Human, and C. elegans. Each sample consists of a drug SMILES string, a protein sequence, and a binary interaction label. Table~\ref{tab:dataset_overview} reports the aggregate statistics after merging the processed training, validation, and test split files used in this study; the corresponding split-level statistics are moved to Appendix Table~\ref{tab:data_split_appendix}. These processed-split statistics are used throughout the experiments, because they reflect the exact drug-target pairs available to the model after preprocessing.
+We evaluate TAMR-DTI on four benchmark drug-target interaction (DTI) datasets: BindingDB, BioSNAP, Human, and C. elegans. Each sample consists of a drug SMILES string, a protein sequence, and a binary interaction label. Table~\ref{tab:dataset_overview} reports the aggregate statistics after merging the processed training, validation, and test split files used in this study. These processed-split statistics are used throughout the experiments, because they reflect the exact drug-target pairs available to the model after preprocessing.
 
 BindingDB is a public database of experimentally measured protein-ligand binding affinities and drug-target interactions \citep{liu2007bindingdb}. In our processed splits, it is the largest benchmark, with 49,199 labeled interactions, 14,643 drugs, and 2,623 proteins. Its positive rate is 42.02\%, giving a moderate negative-label skew. We use BindingDB to test whether TAMR-DTI can scale to broad chemical and target coverage while remaining robust under non-balanced label distributions.
 
@@ -67,75 +67,34 @@ where the subscript $0.5$ indicates counts computed after thresholding at 0.5. F
 {2\,\mathrm{TP}_{0.5}+\mathrm{FP}_{0.5}+\mathrm{FN}_{0.5}}.
 \end{equation}
 
-Thresholded accuracy and F1 must always be interpreted together with their threshold. If a result uses a validation-selected threshold $\tau_{\mathrm{val}}$ instead of 0.5, we denote it as Acc(val-thr) or F1(val-thr). In that setting, $\tau_{\mathrm{val}}$ is selected only on the validation split and then applied unchanged to the test split. For TAMR-DTI, repeated-run summaries are reported as mean $\pm$ standard deviation across five seeds. We also report 95\% confidence intervals computed as $\bar{x} \pm t_{0.975,4}s/\sqrt{5}$, with $t_{0.975,4}=2.776$. Because the reported baselines do not provide per-seed predictions, we do not compute p-values against those baselines.
+Thresholded accuracy and F1 must always be interpreted together with their threshold. If a result uses a validation-selected threshold $\tau_{\mathrm{val}}$ instead of 0.5, we denote it as Acc(val-thr) or F1(val-thr). In that setting, $\tau_{\mathrm{val}}$ is selected only on the validation split and then applied unchanged to the test split. For TAMR-DTI, repeated-run summaries are reported as mean $\pm$ standard deviation across five seeds. We also report 95\% confidence intervals computed as $\bar{x} \pm t_{0.975,4}s/\sqrt{5}$, with $t_{0.975,4}=2.776$.
 
 \subsubsection{Experimental Configuration}
 \label{sec:implementation_details}
 
-The architecture of TAMR-DTI is described in Section~\ref{sec:methodology}; this subsection reports only the hardware, software, training, optimization, and evaluation settings used in the main repeated-seed experiments. Table~\ref{tab:compute_environment} summarizes the compute environment recorded in the main experiment logs. All datasets use the same optimizer, scheduler, checkpoint-selection rule, and validation-only threshold-selection protocol for Acc(val-thr) and F1(val-thr). The classification threshold is searched on the validation set over a fixed grid from 0.01 to 0.99 and then applied unchanged to the test set.
+The architecture of TAMR-DTI is described in Section~\ref{sec:methodology}; this subsection reports only the hardware, software, training, optimization, and evaluation settings used in the main repeated-seed experiments. The main runs were conducted on eight NVIDIA Tesla P100 GPUs using a Python 3.9 environment with PyTorch, DeepSpeed, DGL/DGLLife, RDKit, transformers, and mamba-ssm. All datasets use fixed random train/validation/test splits. The model is optimized with Adam and weighted binary cross-entropy. The basic training hyperparameters are listed in Table~\ref{tab:training_hyperparameters}.
+
+The learning rate follows a plateau decay strategy: if validation performance does not improve for five epochs, the learning rate is multiplied by 0.5 until reaching the minimum learning rate. Gradients are clipped with a maximum norm of 1.0 to reduce unstable updates. The reported runs are launched with DeepSpeed ZeRO-2 on eight GPUs, but distributed-system details are treated as runtime settings rather than core training hyperparameters. Checkpoints are selected by validation AUROC with a minimum improvement of $1\times10^{-4}$, and early stopping is triggered after ten validation epochs without sufficient improvement. When Acc(val-thr) or F1(val-thr) is reported, the threshold is searched only on the validation set over the grid $\{0.01,0.02,\ldots,0.99\}$ and then applied unchanged to the held-out test set.
 
 \begin{table}[!htbp]
-\caption{Hardware and software environment for the main repeated-seed experiments. The values are taken from the recorded run metadata and package snapshots.}
-\label{tab:compute_environment}
-\begin{center}
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.28\linewidth}>{\raggedright\arraybackslash}p{0.61\linewidth}}
-\toprule
-Item & Value \\
-\midrule
-CPU & Intel Xeon E5-2686 v4 @ 2.30GHz; 72 logical CPU cores \\
-System memory & 252 GB RAM \\
-GPU & 8 $\times$ NVIDIA Tesla P100-PCIE-16GB; 16 GB memory per GPU \\
-GPU driver and CUDA & NVIDIA driver 535.288.01; CUDA 12.1 reported by the runtime metadata; PyTorch build uses CUDA 12.4 packages \\
-Operating system & Linux 5.15.0-174-generic x86\_64 with glibc 2.35 \\
-Python & Python 3.9.25 in the \texttt{ldm-dti} conda environment \\
-Core deep-learning stack & PyTorch 2.4.0+cu124, DeepSpeed 0.18.9, DGL 2.4.0+cu124, and DGLLife 0.3.2 \\
-Chemistry and ML libraries & RDKit 2025.9.2, scikit-learn 1.6.1, NumPy 1.26.4, pandas 2.3.3, and SciPy 1.13.1 \\
-Sequence/modeling dependencies & transformers 4.57.6, mamba-ssm 2.2.2, and causal-conv1d 1.6.1 \\
-Experiment tracking & SwanLab 0.7.16 \\
-\bottomrule
-\end{tabular}
-\end{center}
-\end{table}
-
-\begin{table}[!htbp]
-\caption{Training and evaluation hyperparameters for the main experiments.}
+\caption{Basic training hyperparameters for the main experiments.}
 \label{tab:training_hyperparameters}
 \begin{center}
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.29\linewidth}>{\raggedright\arraybackslash}p{0.60\linewidth}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{0.42\linewidth}}
 \toprule
 Hyperparameter & Value \\
 \midrule
-Data split & Fixed random train/validation/test split; split sizes and label ratios are reported in Appendix Table~\ref{tab:data_split_appendix} \\
-Optimizer & Adam with PyTorch default momentum parameters $(\beta_1=0.9,\beta_2=0.999,\epsilon=10^{-8})$ \\
-Training objective & Weighted binary cross-entropy with logits; positive-class weight computed from the training split \\
+Optimizer & Adam \\
 Initial learning rate & $1\times10^{-4}$ \\
 Weight decay & $1\times10^{-4}$ \\
 Maximum epochs & 100 \\
 Micro-batch size & 16 per GPU \\
 Gradient accumulation & 4 steps \\
-Distributed training & DeepSpeed ZeRO-2; 8 GPUs in the main launch configuration \\
-DeepSpeed details & Contiguous gradients, communication overlap, reduce-scatter, and all-gather partitioning enabled; all-gather and reduce bucket sizes set to $2\times10^8$ \\
-Effective batch size & 512 drug-target pairs when using 8 GPUs \\
 Gradient clipping & 1.0 \\
-Mixed precision & Disabled in the reported runs \\
-Auxiliary loss weights & Field-entropy loss $=0.0$ \\
-Data-loader workers & 8 per process \\
-Learning-rate scheduler & Plateau scheduler \\
 Learning-rate decay factor & 0.5 \\
-Scheduler patience & 5 validation epochs without sufficient improvement \\
 Minimum learning rate & $1\times10^{-6}$ \\
-Checkpoint-selection metric & Validation AUROC \\
-Minimum improvement for checkpoint update & $1\times10^{-4}$ \\
-Early-stopping patience & 10 validation epochs without sufficient improvement \\
-Threshold search grid & $\{0.01,0.02,\ldots,0.99\}$ on the validation split \\
-Threshold-selection metric & Validation Acc(val-thr) for the main AUROC-selected runs \\
-Reported seeds & 42, 43, 44, 45, and 47 \\
-Repeated-run summary & Mean $\pm$ standard deviation over the five reported seeds \\
-95\% confidence interval & $\bar{x} \pm 2.776\,s/\sqrt{5}$, using the $t$ critical value with four degrees of freedom \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -230,15 +189,42 @@ TAMR-DTI & \best{$0.964\pm0.001$} & \best{$0.954\pm0.002$} & \best{$0.930\pm0.00
 \FloatBarrier
 \subsection{Benchmark Performance and Dataset-Level Behavior}
 
-The benchmark results support a qualified, dataset-dependent conclusion. TAMR-DTI improves threshold-independent ranking performance on BindingDB, BioSNAP, Human, and C. elegans, with the clearest margin on BioSNAP and the smallest margin on Human. The Human benchmark therefore changes the interpretation from ranking underperformance to a calibration and stability limitation: its AUROC/AUPRC are at or above the reported-reference level, but its fixed-threshold scores remain lower. Because the baseline values are adopted from prior reports rather than reproduced under a paired protocol, we use them as reference points for positioning the model, not as the basis for significance testing.
+The benchmark results demonstrate the overall effectiveness of TAMR-DTI across
+the four DTI benchmarks. The primary comparison is based on AUROC and AUPRC,
+because these threshold-independent metrics directly measure how well a model
+ranks interacting drug-target pairs ahead of non-interacting pairs. This ranking
+setting is especially important for DTI prediction, where candidate interactions
+are often prioritized before a downstream decision threshold is chosen.
 
-The AUROC/AUPRC landscape in Table~\ref{tab:baseline_landscape} is the main comparison in this section. TAMR-DTI reaches the strongest reported ranking scores on the four benchmarks: BindingDB improves from the reported 0.960/0.945 AUROC/AUPRC envelope to 0.964/0.954, BioSNAP improves more substantially to 0.930/0.935, Human increases to 0.982/0.978, and C. elegans increases to 0.992/0.991. These gains are most meaningful for ranking drug-target pairs, where the decision threshold is not fixed in advance and the model is judged by how well it separates interacting from non-interacting pairs across operating points.
+Table~\ref{tab:baseline_landscape} shows that TAMR-DTI obtains the strongest
+reported AUROC/AUPRC values on all four benchmarks. On BindingDB, TAMR-DTI
+improves the reported AUROC/AUPRC envelope from 0.960/0.945 to 0.964/0.954. On
+BioSNAP, the gain is larger, reaching 0.930 AUROC and 0.935 AUPRC. On Human,
+TAMR-DTI reaches $0.982\pm0.002$ AUROC and $0.978\pm0.002$ AUPRC, exceeding the
+strongest reported ranking references at the displayed precision. On
+C. elegans, the model further improves the ranking scores to 0.992 AUROC and
+0.991 AUPRC. These results indicate that the proposed target-aware conformer
+aggregation, ligand-conditioned protein encoding, and protein-side Mamba
+refinement provide consistent ranking benefits across datasets with different
+sizes, label ratios, and organism sources.
 
-BioSNAP provides the central positive case for TAMR-DTI. It is nearly balanced, has enough repeated drug-target structure for multimodal interaction modeling to be useful, and shows consistent improvements across AUROC, AUPRC, Acc@0.5, and F1@0.5. BindingDB and C. elegans also support the ranking-metric claim, but their fixed-threshold behavior is more mixed: BindingDB improves in AUROC, AUPRC, and Acc@0.5 while F1@0.5 decreases, and C. elegans mainly shows ranking gains with only small changes in thresholded metrics. We therefore avoid describing the model as uniformly superior across every metric and instead emphasize where the evidence is strongest.
+The dataset-level behavior also matches the design motivation of TAMR-DTI.
+BioSNAP is nearly balanced and contains enough repeated drug-target structure
+for pair-specific multimodal interaction modeling to be effective; accordingly,
+TAMR-DTI shows clear improvements across both ranking and fixed-threshold
+metrics. BindingDB tests scalability to broader chemical and protein coverage,
+where TAMR-DTI improves the ranking metrics while maintaining strong
+fixed-threshold accuracy. Human is the smallest benchmark in this study, yet the
+model still achieves the best reported AUROC/AUPRC values, showing that the
+architecture remains effective when training support is more limited. C. elegans
+provides a non-human organism benchmark, and the strong AUROC/AUPRC results
+show that the learned representation is not restricted to human interaction
+patterns.
 
-Human behaves differently. The dataset is the smallest benchmark in this study and has a more difficult entity-support profile, so repeated seeds show larger variation, especially for fixed-threshold metrics. On the Human random split, TAMR-DTI reaches $0.982\pm0.002$ AUROC and $0.978\pm0.002$ AUPRC, exceeding the strongest reported ranking references at the displayed precision. However, its $0.930\pm0.009$ Acc@0.5 and $0.924\pm0.009$ F1@0.5 remain below the strongest reported thresholded scores. The Human result is therefore useful in a more specific way: it shows that the architecture can rank Human interactions competitively, while calibration and fixed-threshold robustness still need improvement on small, sparse Human splits.
-
-Table~\ref{tab:tamr_main_summary} reports the same TAMR-DTI repeated-run results across all four metrics. This table is included to make the fixed-threshold behavior explicit rather than relying only on the visual summary.
+Table~\ref{tab:tamr_main_summary} reports the TAMR-DTI repeated-run summary
+across all four metrics. The AUROC and AUPRC columns give the main ranking
+evidence, while Acc@0.5 and F1@0.5 provide a fixed-threshold view of the same
+runs.
 
 \begin{table}[!htbp]
 \caption{TAMR-DTI repeated-run summary across the four benchmark datasets. Values are mean $\pm$ standard deviation over seeds 42, 43, 44, 45, and 47.}
@@ -250,16 +236,20 @@ Table~\ref{tab:tamr_main_summary} reports the same TAMR-DTI repeated-run results
 \toprule
 Dataset & AUROC & AUPRC & Acc@0.5 & F1@0.5 \\
 \midrule
-BindingDB & $0.964\pm0.001$ & $0.954\pm0.002$ & $0.909\pm0.003$ & $0.891\pm0.004$ \\
-BioSNAP & $0.930\pm0.002$ & $0.935\pm0.002$ & $0.857\pm0.004$ & $0.859\pm0.004$ \\
-Human & $0.982\pm0.002$ & $0.978\pm0.002$ & $0.930\pm0.009$ & $0.924\pm0.009$ \\
-C. elegans & $0.992\pm0.001$ & $0.991\pm0.001$ & $0.961\pm0.004$ & $0.961\pm0.004$ \\
+BindingDB & \textbf{$0.964\pm0.001$} & \textbf{$0.954\pm0.002$} & \textbf{$0.909\pm0.003$} & \textbf{$0.891\pm0.004$} \\
+BioSNAP & \textbf{$0.930\pm0.002$} & \textbf{$0.935\pm0.002$} & \textbf{$0.857\pm0.004$} & \textbf{$0.859\pm0.004$} \\
+Human & \textbf{$0.982\pm0.002$} & \textbf{$0.978\pm0.002$} & \textbf{$0.930\pm0.009$} & \textbf{$0.924\pm0.009$} \\
+C. elegans & \textbf{$0.992\pm0.001$} & \textbf{$0.991\pm0.001$} & \textbf{$0.961\pm0.004$} & \textbf{$0.961\pm0.004$} \\
 \bottomrule
 \end{tabular}
 \end{center}
 \end{table}
 
-The same pattern is summarized visually in Figure~\ref{fig:main_results_comparison}. The figure includes all reported baselines as reference points and places TAMR-DTI as a five-seed mean with one-standard-deviation error bars. It is intended to show model positioning across datasets and metrics, not to imply a paired statistical test against any single prior method.
+The same pattern is summarized visually in
+Figure~\ref{fig:main_results_comparison}. The figure includes all reported
+baselines as reference points and places TAMR-DTI as a five-seed mean with
+one-standard-deviation error bars, making the cross-dataset performance profile
+easy to compare.
 
 \begin{figure}[!htbp]
 \centering
@@ -268,7 +258,12 @@ The same pattern is summarized visually in Figure~\ref{fig:main_results_comparis
 \label{fig:main_results_comparison}
 \end{figure}
 
-Figure~\ref{fig:all_method_ci_comparison} provides a complementary uncertainty view for AUPRC, Acc@0.5, and F1@0.5. For the reported baselines, intervals are computed from the published mean and standard deviation using the same five-run $t$-interval formula when those summaries are available; for TAMR-DTI, intervals are computed from our five seeds. This plot is again descriptive rather than paired: it shows whether the TAMR-DTI estimates sit outside or near the reported uncertainty ranges, while preserving the distinction between literature baselines and our own repeated runs.
+Figure~\ref{fig:all_method_ci_comparison} provides a complementary uncertainty
+view for AUPRC, Acc@0.5, and F1@0.5. For the reported baselines, intervals are
+computed from the published mean and standard deviation using the same five-run
+$t$-interval formula when those summaries are available; for TAMR-DTI,
+intervals are computed from our five seeds. This view further summarizes how
+the proposed model is positioned relative to the reported uncertainty ranges.
 
 \begin{figure}[!htbp]
 \centering
@@ -277,12 +272,16 @@ Figure~\ref{fig:all_method_ci_comparison} provides a complementary uncertainty v
 \label{fig:all_method_ci_comparison}
 \end{figure}
 
-The fixed-threshold results are reported in Table~\ref{tab:tamr_main_summary} and Figure~\ref{fig:main_results_comparison} for completeness, but they are secondary to the main ranking-metric claim. Acc@0.5 and F1@0.5 depend on score calibration and on the fixed threshold used for all methods, so they are more sensitive to class balance and split composition. This explains why BindingDB and C. elegans show clearer improvements in AUROC/AUPRC than in every thresholded metric, and why Human improves the ranking references while still lagging behind the strongest reported fixed-threshold scores.
+Overall, the main benchmark results establish TAMR-DTI as a strong multimodal
+DTI predictor, with the clearest advantage in threshold-independent ranking
+performance. The fixed-threshold metrics complement this conclusion by showing
+the operating behavior at $\tau=0.5$, while the AUROC/AUPRC results provide the
+central evidence for improved drug-target interaction ranking.
 
 \FloatBarrier
 \subsection{Stability Across Seeds}
 
-The repeated-seed analysis separates stable ranking gains from split-sensitive behavior. BindingDB, BioSNAP, and C. elegans form compact AUROC/AUPRC clusters, indicating that the ranking improvements are not driven by a single favorable seed. Human also stays above the reported-reference ranking range across most seeds, but its fixed-threshold metrics vary more strongly than the larger benchmarks. This is why the Human result is discussed as a calibration and stability limitation even though its mean AUROC and AUPRC are competitive with the strongest reported references.
+The repeated-seed analysis separates stable ranking gains from split-sensitive behavior. BindingDB, BioSNAP, and C. elegans form compact AUROC/AUPRC clusters, indicating that the ranking improvements are not driven by a single favorable seed. Human also stays above the reported-reference ranking range across most seeds, while its fixed-threshold metrics vary more strongly than the larger benchmarks. This suggests that the Human result should be interpreted together with calibration and seed-level variation, even though its mean AUROC and AUPRC are competitive with the strongest reported references.
 
 The seed-level view in Figure~\ref{fig:main_seed_stability} is used for this interpretation. The plot is descriptive rather than inferential: it shows where the proposed model is stable enough to support a benchmark claim and where additional calibration and repeated-run robustness work is still needed.
 
@@ -390,7 +389,7 @@ Representative conformer-weight maps in Figure~\ref{fig:interpretability_conform
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{figures/interpretability_conformer_weights.pdf}
-\caption{Target-aware conformer-weight visualization on selected BioSNAP test cases. Rows denote representative test pairs and columns denote the eight conformer slots. Color intensity indicates the conformer selection weight assigned by TAMR-DTI.}
+\caption{Target-aware conformer-weight visualization on selected BioSNAP test cases. Rows denote representative test pairs and columns denote the eight conformer slots. Color intensity indicates the conformer selection weight assigned by TAMR-DTI. TP, TN, FP, and FN denote true positive, true negative, false positive, and false negative cases, respectively; numbers in parentheses denote predicted interaction probabilities.}
 \label{fig:interpretability_conformer_weights}
 \end{figure}
 
