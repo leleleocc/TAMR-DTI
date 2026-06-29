@@ -1,0 +1,299 @@
+[2026-06-29 18:32:14,780] [WARNING] [runner.py:232:fetch_hostfile] Unable to find hostfile, will proceed with training with local resources only.
+[2026-06-29 18:32:14,780] [INFO] [runner.py:630:main] cmd = /paddle/miniconda3/envs/ldm-dti/bin/python3.9 -u -m deepspeed.launcher.launch --world_info=eyJsb2NhbGhvc3QiOiBbMCwgMSwgMiwgMywgNCwgNSwgNiwgN119 --master_addr=127.0.0.1 --master_port=29500 --enable_each_rank_log=None --log_level=info src/core/main_ds.py --data datasets/biosnap --split random --deepspeed --deepspeed_config configs/ds_zero2.json --config configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml --cache_root cache/features --save_dir outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42 --swanlab_project LDM-DTI --swanlab_experiment stage2-main-06-full-tamr-dti-n8-biosnap-seed42 --swanlab_log_root swanlog
+[2026-06-29 18:32:20,794] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_DEV_PACKAGE=libnccl-dev=2.15.5-1+cuda11.8
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_DEV_PACKAGE_VERSION=2.15.5-1
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NCCL_VERSION=2.15.5-1
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_DEV_PACKAGE_NAME=libnccl-dev
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_PACKAGE=libnccl2=2.15.5-1+cuda11.8
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_PACKAGE_NAME=libnccl2
+[2026-06-29 18:32:20,795] [INFO] [launch.py:155:main] 0 NV_LIBNCCL_PACKAGE_VERSION=2.15.5-1
+[2026-06-29 18:32:20,795] [INFO] [launch.py:162:main] WORLD INFO DICT: {'localhost': [0, 1, 2, 3, 4, 5, 6, 7]}
+[2026-06-29 18:32:20,795] [INFO] [launch.py:168:main] nnodes=1, num_local_procs=8, node_rank=0
+[2026-06-29 18:32:20,795] [INFO] [launch.py:179:main] global_rank_mapping=defaultdict(<class 'list'>, {'localhost': [0, 1, 2, 3, 4, 5, 6, 7]})
+[2026-06-29 18:32:20,795] [INFO] [launch.py:180:main] dist_world_size=8
+[2026-06-29 18:32:20,795] [INFO] [launch.py:184:main] Setting CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+[2026-06-29 18:32:20,820] [INFO] [launch.py:272:main] process 78088 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=0', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,838] [INFO] [launch.py:272:main] process 78089 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=1', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,859] [INFO] [launch.py:272:main] process 78090 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=2', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,889] [INFO] [launch.py:272:main] process 78091 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=3', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,914] [INFO] [launch.py:272:main] process 78092 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=4', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,945] [INFO] [launch.py:272:main] process 78093 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=5', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:20,974] [INFO] [launch.py:272:main] process 78094 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=6', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+[2026-06-29 18:32:21,004] [INFO] [launch.py:272:main] process 78095 spawned with command: ['/paddle/miniconda3/envs/ldm-dti/bin/python3.9', '-u', 'src/core/main_ds.py', '--local_rank=7', '--data', 'datasets/biosnap', '--split', 'random', '--deepspeed', '--deepspeed_config', 'configs/ds_zero2.json', '--config', 'configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml', '--cache_root', 'cache/features', '--save_dir', 'outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_project', 'LDM-DTI', '--swanlab_experiment', 'stage2-main-06-full-tamr-dti-n8-biosnap-seed42', '--swanlab_log_root', 'swanlog']
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+start time: 2026-06-29 18:32:28.453562
+start...
+dataset: datasets/biosnap
+split: random
+device: cuda:0
+data_dir: data/datasets/biosnap/random
+cache_dir: cache/features/datasets/biosnap/random
+save_dir: outputs/result/stage2-main-06-full-tamr-dti-n8-biosnap-seed42
+config: configs/experiments/stage2_main_06_full_tamr_dti_n8_biosnap_seed42.yaml
+deepspeed_config: configs/ds_zero2.json
+best_metric: val/auroc
+v1 tuned params: fusion_gate_bias=-2.0, fusion_mode=protein_mamba_biintention, field_enhance_gate_bias=-2.0, mamba_enhance_gate_bias=-2.0, mamba_gate_hidden_dim=128, mamba_gate_delta_scale=1.0, mamba_gate_detach_context=False, mamba_gate_bounded=False, cf_start_epoch=30, cf_key_weight=0.0, cf_stable_weight=0.0, field_entropy_weight=0.0
+swanlab_experiment: stage2-main-06-full-tamr-dti-n8-biosnap-seed42
+swanlab_log_dir: swanlog/stage2-main-06-full-tamr-dti-n8-biosnap-seed42
+swanlab: SwanLab run disabled, the data will not be saved or uploaded.
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/paddle/miniconda3/envs/ldm-dti/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+train_pos_weight: 0.9851301115241635
+Epoch [1/100] lr=0.0001 train_loss=0.6097 train_bce_obj=0.6051 train_cf=0.0000 train_obj=0.6051 val_loss=0.5548 val_auc=0.7810 val_aupr=0.8125 val_acc=0.7168 val_f1=0.6739 val_acc@0.5=0.7157 val_f1@0.5=0.6700 val_thr=0.49 test_loss=0.5527 test_auc=0.7832 test_aupr=0.8101 test_acc=0.7153 test_f1=0.6651 test_acc@0.5=0.7142 test_f1@0.5=0.6600 early_stop=0/10
+Epoch time: train=23.98s val=2.45s test=3.65s checkpoint=saved_best_and_last/0.06s total=30.15s
+Epoch [2/100] lr=0.0001 train_loss=0.5392 train_bce_obj=0.5350 train_cf=0.0000 train_obj=0.5350 val_loss=0.5477 val_auc=0.8038 val_aupr=0.8312 val_acc=0.7379 val_f1=0.7073 val_acc@0.5=0.7161 val_f1@0.5=0.7354 val_thr=0.61 test_loss=0.5467 test_auc=0.8124 test_aupr=0.8324 test_acc=0.7391 test_f1=0.7024 test_acc@0.5=0.7249 test_f1@0.5=0.7432 early_stop=0/10
+Epoch time: train=20.96s val=2.46s test=3.64s checkpoint=saved_best_and_last, pruned=1/0.06s total=27.12s
+Epoch [3/100] lr=0.0001 train_loss=0.5082 train_bce_obj=0.5043 train_cf=0.0000 train_obj=0.5043 val_loss=0.5029 val_auc=0.8302 val_aupr=0.8500 val_acc=0.7590 val_f1=0.7508 val_acc@0.5=0.7568 val_f1@0.5=0.7445 val_thr=0.48 test_loss=0.5036 test_auc=0.8288 test_aupr=0.8440 test_acc=0.7575 test_f1=0.7458 test_acc@0.5=0.7568 test_f1@0.5=0.7407 early_stop=0/10
+Epoch time: train=20.86s val=2.48s test=3.58s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.99s
+Epoch [4/100] lr=0.0001 train_loss=0.4834 train_bce_obj=0.4796 train_cf=0.0000 train_obj=0.4796 val_loss=0.4935 val_auc=0.8382 val_aupr=0.8594 val_acc=0.7616 val_f1=0.7336 val_acc@0.5=0.7554 val_f1@0.5=0.7593 val_thr=0.65 test_loss=0.4859 test_auc=0.8453 test_aupr=0.8612 test_acc=0.7648 test_f1=0.7326 test_acc@0.5=0.7686 test_f1@0.5=0.7690 early_stop=0/10
+Epoch time: train=20.61s val=2.50s test=3.63s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.80s
+Epoch [5/100] lr=0.0001 train_loss=0.4638 train_bce_obj=0.4602 train_cf=0.0000 train_obj=0.4602 val_loss=0.4801 val_auc=0.8494 val_aupr=0.8646 val_acc=0.7703 val_f1=0.7678 val_acc@0.5=0.7681 val_f1@0.5=0.7588 val_thr=0.46 test_loss=0.4744 test_auc=0.8503 test_aupr=0.8675 test_acc=0.7790 test_f1=0.7731 test_acc@0.5=0.7792 test_f1@0.5=0.7663 early_stop=0/10
+Epoch time: train=20.64s val=2.53s test=3.66s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.89s
+Epoch [6/100] lr=0.0001 train_loss=0.4467 train_bce_obj=0.4432 train_cf=0.0000 train_obj=0.4432 val_loss=0.4840 val_auc=0.8483 val_aupr=0.8602 val_acc=0.7758 val_f1=0.7753 val_acc@0.5=0.7728 val_f1@0.5=0.7790 val_thr=0.53 test_loss=0.4788 test_auc=0.8538 test_aupr=0.8616 test_acc=0.7752 test_f1=0.7735 test_acc@0.5=0.7713 test_f1@0.5=0.7763 early_stop=1/10
+Epoch time: train=20.62s val=2.54s test=3.69s checkpoint=saved_last/0.05s total=26.91s
+Epoch [7/100] lr=0.0001 train_loss=0.4335 train_bce_obj=0.4302 train_cf=0.0000 train_obj=0.4302 val_loss=0.4611 val_auc=0.8651 val_aupr=0.8808 val_acc=0.7834 val_f1=0.7726 val_acc@0.5=0.7790 val_f1@0.5=0.7836 val_thr=0.62 test_loss=0.4496 test_auc=0.8706 test_aupr=0.8844 test_acc=0.7941 test_f1=0.7797 test_acc@0.5=0.7914 test_f1@0.5=0.7925 early_stop=0/10
+Epoch time: train=20.58s val=2.51s test=3.75s checkpoint=saved_best_and_last, pruned=2/0.07s total=26.92s
+Epoch [8/100] lr=0.0001 train_loss=0.4148 train_bce_obj=0.4117 train_cf=0.0000 train_obj=0.4117 val_loss=0.4597 val_auc=0.8664 val_aupr=0.8752 val_acc=0.7849 val_f1=0.7872 val_acc@0.5=0.7790 val_f1@0.5=0.7698 val_thr=0.43 test_loss=0.4525 test_auc=0.8690 test_aupr=0.8807 test_acc=0.7892 test_f1=0.7898 test_acc@0.5=0.7950 test_f1@0.5=0.7839 early_stop=0/10
+Epoch time: train=20.56s val=2.57s test=3.69s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.89s
+Epoch [9/100] lr=0.0001 train_loss=0.4016 train_bce_obj=0.3985 train_cf=0.0000 train_obj=0.3985 val_loss=0.4422 val_auc=0.8764 val_aupr=0.8926 val_acc=0.7925 val_f1=0.7907 val_acc@0.5=0.7900 val_f1@0.5=0.7927 val_thr=0.54 test_loss=0.4349 test_auc=0.8777 test_aupr=0.8933 test_acc=0.7988 test_f1=0.7925 test_acc@0.5=0.7972 test_f1@0.5=0.7964 early_stop=0/10
+Epoch time: train=20.41s val=2.48s test=3.75s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.70s
+Epoch [10/100] lr=0.0001 train_loss=0.3850 train_bce_obj=0.3820 train_cf=0.0000 train_obj=0.3820 val_loss=0.4523 val_auc=0.8762 val_aupr=0.8886 val_acc=0.7969 val_f1=0.8031 val_acc@0.5=0.7921 val_f1@0.5=0.7881 val_thr=0.39 test_loss=0.4439 test_auc=0.8777 test_aupr=0.8913 test_acc=0.7968 test_f1=0.7992 test_acc@0.5=0.7992 test_f1@0.5=0.7914 early_stop=1/10
+Epoch time: train=20.61s val=2.55s test=3.79s checkpoint=saved_last/0.05s total=27.02s
+Epoch [11/100] lr=0.0001 train_loss=0.3693 train_bce_obj=0.3665 train_cf=0.0000 train_obj=0.3665 val_loss=0.4344 val_auc=0.8820 val_aupr=0.8963 val_acc=0.8020 val_f1=0.8050 val_acc@0.5=0.8005 val_f1@0.5=0.7979 val_thr=0.44 test_loss=0.4269 test_auc=0.8837 test_aupr=0.8975 test_acc=0.8039 test_f1=0.8046 test_acc@0.5=0.8054 test_f1@0.5=0.7999 early_stop=0/10
+Epoch time: train=20.69s val=2.52s test=3.79s checkpoint=saved_best_and_last, pruned=2/0.07s total=27.08s
+Epoch [12/100] lr=0.0001 train_loss=0.3557 train_bce_obj=0.3529 train_cf=0.0000 train_obj=0.3529 val_loss=0.4199 val_auc=0.8910 val_aupr=0.9019 val_acc=0.8067 val_f1=0.8118 val_acc@0.5=0.8023 val_f1@0.5=0.8098 val_thr=0.52 test_loss=0.4110 test_auc=0.8948 test_aupr=0.9054 test_acc=0.8107 test_f1=0.8124 test_acc@0.5=0.8081 test_f1@0.5=0.8122 early_stop=0/10
+Epoch time: train=20.29s val=2.56s test=3.76s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.68s
+Epoch [13/100] lr=0.0001 train_loss=0.3448 train_bce_obj=0.3421 train_cf=0.0000 train_obj=0.3421 val_loss=0.4183 val_auc=0.8938 val_aupr=0.9039 val_acc=0.8107 val_f1=0.8051 val_acc@0.5=0.8078 val_f1@0.5=0.8052 val_thr=0.53 test_loss=0.4078 test_auc=0.8965 test_aupr=0.9057 test_acc=0.8165 test_f1=0.8088 test_acc@0.5=0.8183 test_f1@0.5=0.8134 early_stop=0/10
+Epoch time: train=20.51s val=2.53s test=3.71s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.82s
+Epoch [14/100] lr=0.0001 train_loss=0.3296 train_bce_obj=0.3270 train_cf=0.0000 train_obj=0.3270 val_loss=0.4178 val_auc=0.8918 val_aupr=0.9023 val_acc=0.8092 val_f1=0.8127 val_acc@0.5=0.8082 val_f1@0.5=0.8137 val_thr=0.52 test_loss=0.4005 test_auc=0.8993 test_aupr=0.9109 test_acc=0.8189 test_f1=0.8185 test_acc@0.5=0.8178 test_f1@0.5=0.8192 early_stop=1/10
+Epoch time: train=20.51s val=2.49s test=3.70s checkpoint=saved_last/0.05s total=26.75s
+Epoch [15/100] lr=0.0001 train_loss=0.3152 train_bce_obj=0.3128 train_cf=0.0000 train_obj=0.3128 val_loss=0.4069 val_auc=0.8994 val_aupr=0.9100 val_acc=0.8216 val_f1=0.8145 val_acc@0.5=0.8198 val_f1@0.5=0.8167 val_thr=0.55 test_loss=0.4068 test_auc=0.8989 test_aupr=0.9095 test_acc=0.8229 test_f1=0.8120 test_acc@0.5=0.8229 test_f1@0.5=0.8167 early_stop=0/10
+Epoch time: train=20.51s val=2.62s test=3.71s checkpoint=saved_best_and_last, pruned=2/0.07s total=26.91s
+Epoch [16/100] lr=0.0001 train_loss=0.3044 train_bce_obj=0.3021 train_cf=0.0000 train_obj=0.3021 val_loss=0.4132 val_auc=0.8998 val_aupr=0.9088 val_acc=0.8154 val_f1=0.8128 val_acc@0.5=0.8111 val_f1@0.5=0.8205 val_thr=0.65 test_loss=0.4112 test_auc=0.9005 test_aupr=0.9119 test_acc=0.8221 test_f1=0.8167 test_acc@0.5=0.8109 test_f1@0.5=0.8173 early_stop=0/10
+Epoch time: train=20.43s val=2.57s test=3.76s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.82s
+Epoch [17/100] lr=0.0001 train_loss=0.2962 train_bce_obj=0.2940 train_cf=0.0000 train_obj=0.2940 val_loss=0.3978 val_auc=0.9050 val_aupr=0.9139 val_acc=0.8234 val_f1=0.8180 val_acc@0.5=0.8205 val_f1@0.5=0.8220 val_thr=0.60 test_loss=0.3887 test_auc=0.9076 test_aupr=0.9182 test_acc=0.8301 test_f1=0.8223 test_acc@0.5=0.8294 test_f1@0.5=0.8288 early_stop=0/10
+Epoch time: train=20.60s val=2.67s test=3.72s checkpoint=saved_best_and_last, pruned=1/0.07s total=27.06s
+Epoch [18/100] lr=0.0001 train_loss=0.2793 train_bce_obj=0.2771 train_cf=0.0000 train_obj=0.2771 val_loss=0.3961 val_auc=0.9068 val_aupr=0.9134 val_acc=0.8245 val_f1=0.8309 val_acc@0.5=0.8194 val_f1@0.5=0.8204 val_thr=0.42 test_loss=0.3842 test_auc=0.9102 test_aupr=0.9203 test_acc=0.8303 test_f1=0.8330 test_acc@0.5=0.8322 test_f1@0.5=0.8299 early_stop=0/10
+Epoch time: train=20.51s val=2.59s test=3.70s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.87s
+Epoch [19/100] lr=0.0001 train_loss=0.2701 train_bce_obj=0.2681 train_cf=0.0000 train_obj=0.2681 val_loss=0.3980 val_auc=0.9043 val_aupr=0.9139 val_acc=0.8216 val_f1=0.8252 val_acc@0.5=0.8205 val_f1@0.5=0.8222 val_thr=0.47 test_loss=0.3870 test_auc=0.9083 test_aupr=0.9185 test_acc=0.8247 test_f1=0.8266 test_acc@0.5=0.8269 test_f1@0.5=0.8273 early_stop=1/10
+Epoch time: train=20.60s val=2.63s test=3.74s checkpoint=saved_last/0.05s total=27.03s
+Epoch [20/100] lr=0.0001 train_loss=0.2593 train_bce_obj=0.2574 train_cf=0.0000 train_obj=0.2574 val_loss=0.4127 val_auc=0.9067 val_aupr=0.9129 val_acc=0.8202 val_f1=0.8246 val_acc@0.5=0.8187 val_f1@0.5=0.8145 val_thr=0.37 test_loss=0.3964 test_auc=0.9109 test_aupr=0.9204 test_acc=0.8312 test_f1=0.8329 test_acc@0.5=0.8356 test_f1@0.5=0.8299 early_stop=2/10
+Epoch time: train=20.83s val=2.63s test=3.85s checkpoint=saved_last, pruned=1/0.06s total=27.38s
+Epoch [21/100] lr=0.0001 train_loss=0.2492 train_bce_obj=0.2473 train_cf=0.0000 train_obj=0.2473 val_loss=0.3879 val_auc=0.9137 val_aupr=0.9191 val_acc=0.8333 val_f1=0.8301 val_acc@0.5=0.8282 val_f1@0.5=0.8320 val_thr=0.64 test_loss=0.3800 test_auc=0.9163 test_aupr=0.9247 test_acc=0.8403 test_f1=0.8340 test_acc@0.5=0.8383 test_f1@0.5=0.8393 early_stop=0/10
+Epoch time: train=21.39s val=2.58s test=3.74s checkpoint=saved_best_and_last, pruned=2/0.07s total=27.80s
+Epoch [22/100] lr=0.0001 train_loss=0.2440 train_bce_obj=0.2422 train_cf=0.0000 train_obj=0.2422 val_loss=0.3878 val_auc=0.9147 val_aupr=0.9205 val_acc=0.8402 val_f1=0.8439 val_acc@0.5=0.8380 val_f1@0.5=0.8434 val_thr=0.53 test_loss=0.3849 test_auc=0.9164 test_aupr=0.9246 test_acc=0.8371 test_f1=0.8387 test_acc@0.5=0.8367 test_f1@0.5=0.8401 early_stop=0/10
+Epoch time: train=21.26s val=2.60s test=3.73s checkpoint=saved_best_and_last, pruned=1/0.06s total=27.66s
+Epoch [23/100] lr=0.0001 train_loss=0.2301 train_bce_obj=0.2284 train_cf=0.0000 train_obj=0.2284 val_loss=0.3900 val_auc=0.9146 val_aupr=0.9193 val_acc=0.8344 val_f1=0.8420 val_acc@0.5=0.8304 val_f1@0.5=0.8368 val_thr=0.47 test_loss=0.3852 test_auc=0.9159 test_aupr=0.9240 test_acc=0.8349 test_f1=0.8394 test_acc@0.5=0.8380 test_f1@0.5=0.8412 early_stop=1/10
+Epoch time: train=20.74s val=2.63s test=3.76s checkpoint=saved_last/0.06s total=27.20s
+Epoch [24/100] lr=0.0001 train_loss=0.2175 train_bce_obj=0.2158 train_cf=0.0000 train_obj=0.2158 val_loss=0.3952 val_auc=0.9149 val_aupr=0.9165 val_acc=0.8387 val_f1=0.8385 val_acc@0.5=0.8351 val_f1@0.5=0.8331 val_thr=0.47 test_loss=0.3818 test_auc=0.9176 test_aupr=0.9257 test_acc=0.8436 test_f1=0.8408 test_acc@0.5=0.8451 test_f1@0.5=0.8410 early_stop=0/10
+Epoch time: train=20.88s val=2.64s test=3.73s checkpoint=saved_best_and_last, pruned=2/0.07s total=27.32s
+Epoch [25/100] lr=0.0001 train_loss=0.2051 train_bce_obj=0.2036 train_cf=0.0000 train_obj=0.2036 val_loss=0.3737 val_auc=0.9212 val_aupr=0.9232 val_acc=0.8493 val_f1=0.8534 val_acc@0.5=0.8478 val_f1@0.5=0.8500 val_thr=0.45 test_loss=0.3739 test_auc=0.9215 test_aupr=0.9293 test_acc=0.8445 test_f1=0.8478 test_acc@0.5=0.8469 test_f1@0.5=0.8476 early_stop=0/10
+Epoch time: train=20.55s val=2.62s test=3.74s checkpoint=saved_best_and_last, pruned=1/0.06s total=26.98s
+Epoch [26/100] lr=0.0001 train_loss=0.2019 train_bce_obj=0.2004 train_cf=0.0000 train_obj=0.2004 val_loss=0.3833 val_auc=0.9225 val_aupr=0.9272 val_acc=0.8453 val_f1=0.8507 val_acc@0.5=0.8416 val_f1@0.5=0.8444 val_thr=0.42 test_loss=0.3800 test_auc=0.9233 test_aupr=0.9306 test_acc=0.8443 test_f1=0.8483 test_acc@0.5=0.8484 test_f1@0.5=0.8490 early_stop=0/10
+Epoch time: train=20.86s val=2.62s test=3.83s checkpoint=saved_best_and_last, pruned=1/0.06s total=27.37s
+Epoch [27/100] lr=0.0001 train_loss=0.1877 train_bce_obj=0.1863 train_cf=0.0000 train_obj=0.1863 val_loss=0.3778 val_auc=0.9252 val_aupr=0.9293 val_acc=0.8478 val_f1=0.8454 val_acc@0.5=0.8460 val_f1@0.5=0.8443 val_thr=0.52 test_loss=0.3737 test_auc=0.9249 test_aupr=0.9316 test_acc=0.8514 test_f1=0.8470 test_acc@0.5=0.8516 test_f1@0.5=0.8477 early_stop=0/10
+Epoch time: train=20.69s val=2.67s test=3.82s checkpoint=saved_best_and_last, pruned=1/0.47s total=27.65s
+Epoch [28/100] lr=0.0001 train_loss=0.1783 train_bce_obj=0.1770 train_cf=0.0000 train_obj=0.1770 val_loss=0.3864 val_auc=0.9223 val_aupr=0.9239 val_acc=0.8504 val_f1=0.8535 val_acc@0.5=0.8478 val_f1@0.5=0.8503 val_thr=0.47 test_loss=0.3784 test_auc=0.9240 test_aupr=0.9299 test_acc=0.8478 test_f1=0.8487 test_acc@0.5=0.8487 test_f1@0.5=0.8481 early_stop=1/10
+Epoch time: train=20.69s val=2.63s test=3.79s checkpoint=saved_last/0.05s total=27.16s
+Epoch [29/100] lr=0.0001 train_loss=0.1756 train_bce_obj=0.1743 train_cf=0.0000 train_obj=0.1743 val_loss=0.3896 val_auc=0.9219 val_aupr=0.9247 val_acc=0.8467 val_f1=0.8530 val_acc@0.5=0.8442 val_f1@0.5=0.8481 val_thr=0.44 test_loss=0.3877 test_auc=0.9235 test_aupr=0.9308 test_acc=0.8429 test_f1=0.8469 test_acc@0.5=0.8473 test_f1@0.5=0.8491 early_stop=2/10
+Epoch time: train=21.19s val=2.67s test=4.70s checkpoint=saved_last, pruned=1/0.06s total=28.62s
+Epoch [30/100] lr=0.0001 train_loss=0.1652 train_bce_obj=0.1640 train_cf=0.0000 train_obj=0.1640 val_loss=0.3996 val_auc=0.9192 val_aupr=0.9221 val_acc=0.8416 val_f1=0.8443 val_acc@0.5=0.8409 val_f1@0.5=0.8430 val_thr=0.48 test_loss=0.3808 test_auc=0.9243 test_aupr=0.9293 test_acc=0.8505 test_f1=0.8499 test_acc@0.5=0.8507 test_f1@0.5=0.8495 early_stop=3/10
+Epoch time: train=20.60s val=3.08s test=4.76s checkpoint=saved_last, pruned=1/0.42s total=28.87s
+Epoch [31/100] lr=0.0001 train_loss=0.1602 train_bce_obj=0.1590 train_cf=0.0000 train_obj=0.1590 val_loss=0.3906 val_auc=0.9244 val_aupr=0.9288 val_acc=0.8504 val_f1=0.8524 val_acc@0.5=0.8489 val_f1@0.5=0.8508 val_thr=0.49 test_loss=0.3919 test_auc=0.9237 test_aupr=0.9306 test_acc=0.8484 test_f1=0.8479 test_acc@0.5=0.8480 test_f1@0.5=0.8472 early_stop=4/10
+Epoch time: train=20.55s val=2.53s test=3.76s checkpoint=saved_last, pruned=1/0.06s total=26.90s
+Epoch [32/100] lr=0.0001 train_loss=0.1515 train_bce_obj=0.1504 train_cf=0.0000 train_obj=0.1504 val_loss=0.4010 val_auc=0.9224 val_aupr=0.9245 val_acc=0.8515 val_f1=0.8509 val_acc@0.5=0.8493 val_f1@0.5=0.8499 val_thr=0.54 test_loss=0.3940 test_auc=0.9236 test_aupr=0.9297 test_acc=0.8469 test_f1=0.8436 test_acc@0.5=0.8462 test_f1@0.5=0.8441 early_stop=5/10
+reduce lr: 0.0001 -> 5e-05
+Epoch time: train=20.65s val=2.60s test=3.91s checkpoint=saved_last, pruned=1/0.06s total=27.22s
+Epoch [33/100] lr=5e-05 train_loss=0.1281 train_bce_obj=0.1272 train_cf=0.0000 train_obj=0.1272 val_loss=0.3846 val_auc=0.9281 val_aupr=0.9309 val_acc=0.8566 val_f1=0.8547 val_acc@0.5=0.8515 val_f1@0.5=0.8560 val_thr=0.69 test_loss=0.3845 test_auc=0.9286 test_aupr=0.9335 test_acc=0.8573 test_f1=0.8538 test_acc@0.5=0.8529 test_f1@0.5=0.8556 early_stop=0/10
+Epoch time: train=20.56s val=2.61s test=3.76s checkpoint=saved_best_and_last, pruned=2/0.07s total=27.01s
+Epoch [34/100] lr=5e-05 train_loss=0.1164 train_bce_obj=0.1156 train_cf=0.0000 train_obj=0.1156 val_loss=0.3952 val_auc=0.9270 val_aupr=0.9281 val_acc=0.8540 val_f1=0.8541 val_acc@0.5=0.8537 val_f1@0.5=0.8538 val_thr=0.51 test_loss=0.3843 test_auc=0.9299 test_aupr=0.9347 test_acc=0.8576 test_f1=0.8552 test_acc@0.5=0.8580 test_f1@0.5=0.8558 early_stop=1/10
+Epoch time: train=21.10s val=2.58s test=3.78s checkpoint=saved_last/0.05s total=27.52s
+Epoch [35/100] lr=5e-05 train_loss=0.1098 train_bce_obj=0.1090 train_cf=0.0000 train_obj=0.1090 val_loss=0.4004 val_auc=0.9270 val_aupr=0.9294 val_acc=0.8533 val_f1=0.8557 val_acc@0.5=0.8497 val_f1@0.5=0.8534 val_thr=0.55 test_loss=0.3844 test_auc=0.9306 test_aupr=0.9358 test_acc=0.8595 test_f1=0.8592 test_acc@0.5=0.8569 test_f1@0.5=0.8580 early_stop=2/10
+Epoch time: train=20.90s val=2.58s test=3.70s checkpoint=saved_last, pruned=1/0.06s total=27.25s
+Epoch [36/100] lr=5e-05 train_loss=0.1035 train_bce_obj=0.1027 train_cf=0.0000 train_obj=0.1027 val_loss=0.4020 val_auc=0.9251 val_aupr=0.9255 val_acc=0.8511 val_f1=0.8503 val_acc@0.5=0.8497 val_f1@0.5=0.8508 val_thr=0.55 test_loss=0.3993 test_auc=0.9262 test_aupr=0.9294 test_acc=0.8534 test_f1=0.8503 test_acc@0.5=0.8558 test_f1@0.5=0.8541 early_stop=3/10
+Epoch time: train=20.40s val=2.57s test=3.77s checkpoint=saved_last, pruned=1/0.06s total=26.81s
+Epoch [37/100] lr=5e-05 train_loss=0.1010 train_bce_obj=0.1002 train_cf=0.0000 train_obj=0.1002 val_loss=0.4110 val_auc=0.9260 val_aupr=0.9261 val_acc=0.8511 val_f1=0.8564 val_acc@0.5=0.8489 val_f1@0.5=0.8523 val_thr=0.43 test_loss=0.3989 test_auc=0.9290 test_aupr=0.9338 test_acc=0.8524 test_f1=0.8548 test_acc@0.5=0.8547 test_f1@0.5=0.8555 early_stop=4/10
+Epoch time: train=20.56s val=2.56s test=3.76s checkpoint=saved_last, pruned=1/0.06s total=26.95s
+Epoch [38/100] lr=5e-05 train_loss=0.0968 train_bce_obj=0.0961 train_cf=0.0000 train_obj=0.0961 val_loss=0.4119 val_auc=0.9270 val_aupr=0.9270 val_acc=0.8573 val_f1=0.8576 val_acc@0.5=0.8533 val_f1@0.5=0.8578 val_thr=0.64 test_loss=0.3981 test_auc=0.9302 test_aupr=0.9355 test_acc=0.8560 test_f1=0.8548 test_acc@0.5=0.8556 test_f1@0.5=0.8582 early_stop=5/10
+reduce lr: 5e-05 -> 2.5e-05
+Epoch time: train=20.87s val=2.57s test=3.76s checkpoint=saved_last, pruned=1/0.06s total=27.27s
+Epoch [39/100] lr=2.5e-05 train_loss=0.0838 train_bce_obj=0.0832 train_cf=0.0000 train_obj=0.0832 val_loss=0.4104 val_auc=0.9270 val_aupr=0.9273 val_acc=0.8595 val_f1=0.8603 val_acc@0.5=0.8551 val_f1@0.5=0.8583 val_thr=0.59 test_loss=0.3984 test_auc=0.9315 test_aupr=0.9361 test_acc=0.8607 test_f1=0.8604 test_acc@0.5=0.8582 test_f1@0.5=0.8599 early_stop=6/10
+Epoch time: train=20.63s val=2.66s test=3.79s checkpoint=saved_last, pruned=1/0.06s total=27.15s
+Epoch [40/100] lr=2.5e-05 train_loss=0.0775 train_bce_obj=0.0769 train_cf=0.0000 train_obj=0.0769 val_loss=0.4091 val_auc=0.9300 val_aupr=0.9299 val_acc=0.8569 val_f1=0.8629 val_acc@0.5=0.8533 val_f1@0.5=0.8545 val_thr=0.32 test_loss=0.4025 test_auc=0.9312 test_aupr=0.9361 test_acc=0.8556 test_f1=0.8590 test_acc@0.5=0.8598 test_f1@0.5=0.8590 early_stop=0/10
+Epoch time: train=20.82s val=2.68s test=3.76s checkpoint=saved_best_and_last, pruned=2/0.07s total=27.34s
+Epoch [41/100] lr=2.5e-05 train_loss=0.0751 train_bce_obj=0.0746 train_cf=0.0000 train_obj=0.0746 val_loss=0.4140 val_auc=0.9286 val_aupr=0.9285 val_acc=0.8544 val_f1=0.8587 val_acc@0.5=0.8537 val_f1@0.5=0.8577 val_thr=0.48 test_loss=0.4063 test_auc=0.9312 test_aupr=0.9362 test_acc=0.8576 test_f1=0.8601 test_acc@0.5=0.8587 test_f1@0.5=0.8606 early_stop=1/10
+Epoch time: train=20.63s val=2.53s test=3.74s checkpoint=saved_last/0.05s total=26.96s
+Epoch [42/100] lr=2.5e-05 train_loss=0.0737 train_bce_obj=0.0732 train_cf=0.0000 train_obj=0.0732 val_loss=0.4163 val_auc=0.9298 val_aupr=0.9305 val_acc=0.8580 val_f1=0.8567 val_acc@0.5=0.8526 val_f1@0.5=0.8564 val_thr=0.69 test_loss=0.4129 test_auc=0.9314 test_aupr=0.9367 test_acc=0.8618 test_f1=0.8599 test_acc@0.5=0.8595 test_f1@0.5=0.8615 early_stop=2/10
+Epoch time: train=20.77s val=2.64s test=3.77s checkpoint=saved_last, pruned=1/0.06s total=27.26s
+Epoch [43/100] lr=2.5e-05 train_loss=0.0709 train_bce_obj=0.0704 train_cf=0.0000 train_obj=0.0704 val_loss=0.4198 val_auc=0.9268 val_aupr=0.9258 val_acc=0.8555 val_f1=0.8548 val_acc@0.5=0.8522 val_f1@0.5=0.8552 val_thr=0.62 test_loss=0.4121 test_auc=0.9295 test_aupr=0.9334 test_acc=0.8595 test_f1=0.8577 test_acc@0.5=0.8596 test_f1@0.5=0.8605 early_stop=3/10
+Epoch time: train=20.56s val=2.57s test=3.73s checkpoint=saved_last, pruned=1/0.07s total=26.94s
+Epoch [44/100] lr=2.5e-05 train_loss=0.0685 train_bce_obj=0.0680 train_cf=0.0000 train_obj=0.0680 val_loss=0.4329 val_auc=0.9273 val_aupr=0.9267 val_acc=0.8533 val_f1=0.8538 val_acc@0.5=0.8497 val_f1@0.5=0.8550 val_thr=0.68 test_loss=0.4215 test_auc=0.9305 test_aupr=0.9350 test_acc=0.8591 test_f1=0.8579 test_acc@0.5=0.8565 test_f1@0.5=0.8590 early_stop=4/10
+Epoch time: train=20.88s val=2.62s test=3.69s checkpoint=saved_last, pruned=1/0.06s total=27.26s
+Epoch [45/100] lr=2.5e-05 train_loss=0.0643 train_bce_obj=0.0638 train_cf=0.0000 train_obj=0.0638 val_loss=0.4311 val_auc=0.9273 val_aupr=0.9269 val_acc=0.8522 val_f1=0.8594 val_acc@0.5=0.8500 val_f1@0.5=0.8541 val_thr=0.34 test_loss=0.4164 test_auc=0.9307 test_aupr=0.9353 test_acc=0.8542 test_f1=0.8591 test_acc@0.5=0.8596 test_f1@0.5=0.8610 early_stop=5/10
+reduce lr: 2.5e-05 -> 1.25e-05
+Epoch time: train=20.42s val=2.59s test=3.86s checkpoint=saved_last, pruned=1/0.06s total=26.94s
+Epoch [46/100] lr=1.25e-05 train_loss=0.0600 train_bce_obj=0.0596 train_cf=0.0000 train_obj=0.0596 val_loss=0.4249 val_auc=0.9302 val_aupr=0.9300 val_acc=0.8577 val_f1=0.8577 val_acc@0.5=0.8537 val_f1@0.5=0.8567 val_thr=0.63 test_loss=0.4195 test_auc=0.9321 test_aupr=0.9372 test_acc=0.8624 test_f1=0.8609 test_acc@0.5=0.8624 test_f1@0.5=0.8630 early_stop=0/10
+Epoch time: train=20.92s val=2.63s test=3.69s checkpoint=saved_best_and_last, pruned=2/0.10s total=27.35s
+Epoch [47/100] lr=1.25e-05 train_loss=0.0574 train_bce_obj=0.0569 train_cf=0.0000 train_obj=0.0569 val_loss=0.4316 val_auc=0.9288 val_aupr=0.9281 val_acc=0.8577 val_f1=0.8566 val_acc@0.5=0.8500 val_f1@0.5=0.8555 val_thr=0.73 test_loss=0.4250 test_auc=0.9312 test_aupr=0.9358 test_acc=0.8640 test_f1=0.8618 test_acc@0.5=0.8584 test_f1@0.5=0.8610 early_stop=1/10
+Epoch time: train=20.94s val=2.59s test=3.82s checkpoint=saved_last/0.05s total=27.40s
+Epoch [48/100] lr=1.25e-05 train_loss=0.0570 train_bce_obj=0.0566 train_cf=0.0000 train_obj=0.0566 val_loss=0.4285 val_auc=0.9297 val_aupr=0.9291 val_acc=0.8591 val_f1=0.8587 val_acc@0.5=0.8548 val_f1@0.5=0.8583 val_thr=0.66 test_loss=0.4236 test_auc=0.9313 test_aupr=0.9363 test_acc=0.8618 test_f1=0.8596 test_acc@0.5=0.8602 test_f1@0.5=0.8610 early_stop=2/10
+Epoch time: train=20.82s val=2.64s test=3.69s checkpoint=saved_last, pruned=1/0.06s total=27.23s
+Epoch [49/100] lr=1.25e-05 train_loss=0.0550 train_bce_obj=0.0546 train_cf=0.0000 train_obj=0.0546 val_loss=0.4313 val_auc=0.9289 val_aupr=0.9285 val_acc=0.8566 val_f1=0.8559 val_acc@0.5=0.8529 val_f1@0.5=0.8555 val_thr=0.62 test_loss=0.4261 test_auc=0.9311 test_aupr=0.9358 test_acc=0.8615 test_f1=0.8599 test_acc@0.5=0.8571 test_f1@0.5=0.8585 early_stop=3/10
+Epoch time: train=20.99s val=2.55s test=3.71s checkpoint=saved_last, pruned=1/0.06s total=27.31s
+Epoch [50/100] lr=1.25e-05 train_loss=0.0544 train_bce_obj=0.0540 train_cf=0.0000 train_obj=0.0540 val_loss=0.4309 val_auc=0.9301 val_aupr=0.9295 val_acc=0.8580 val_f1=0.8559 val_acc@0.5=0.8544 val_f1@0.5=0.8570 val_thr=0.70 test_loss=0.4243 test_auc=0.9312 test_aupr=0.9357 test_acc=0.8626 test_f1=0.8584 test_acc@0.5=0.8604 test_f1@0.5=0.8606 early_stop=4/10
+Epoch time: train=20.81s val=2.58s test=3.77s checkpoint=saved_last, pruned=1/0.06s total=27.23s
+Epoch [51/100] lr=1.25e-05 train_loss=0.0534 train_bce_obj=0.0530 train_cf=0.0000 train_obj=0.0530 val_loss=0.4394 val_auc=0.9292 val_aupr=0.9287 val_acc=0.8569 val_f1=0.8605 val_acc@0.5=0.8562 val_f1@0.5=0.8607 val_thr=0.53 test_loss=0.4298 test_auc=0.9314 test_aupr=0.9360 test_acc=0.8607 test_f1=0.8624 test_acc@0.5=0.8595 test_f1@0.5=0.8615 early_stop=5/10
+reduce lr: 1.25e-05 -> 6.25e-06
+Epoch time: train=20.67s val=2.60s test=3.78s checkpoint=saved_last, pruned=1/0.06s total=27.13s
+Epoch [52/100] lr=6.25e-06 train_loss=0.0515 train_bce_obj=0.0511 train_cf=0.0000 train_obj=0.0511 val_loss=0.4416 val_auc=0.9286 val_aupr=0.9272 val_acc=0.8566 val_f1=0.8583 val_acc@0.5=0.8533 val_f1@0.5=0.8559 val_thr=0.55 test_loss=0.4272 test_auc=0.9316 test_aupr=0.9359 test_acc=0.8611 test_f1=0.8609 test_acc@0.5=0.8616 test_f1@0.5=0.8623 early_stop=6/10
+Epoch time: train=20.65s val=2.55s test=3.74s checkpoint=saved_last, pruned=1/0.06s total=27.01s
+Epoch [53/100] lr=6.25e-06 train_loss=0.0502 train_bce_obj=0.0498 train_cf=0.0000 train_obj=0.0498 val_loss=0.4428 val_auc=0.9290 val_aupr=0.9294 val_acc=0.8573 val_f1=0.8561 val_acc@0.5=0.8518 val_f1@0.5=0.8546 val_thr=0.68 test_loss=0.4283 test_auc=0.9318 test_aupr=0.9363 test_acc=0.8626 test_f1=0.8596 test_acc@0.5=0.8613 test_f1@0.5=0.8622 early_stop=7/10
+Epoch time: train=20.54s val=2.55s test=3.75s checkpoint=saved_last, pruned=1/0.06s total=26.92s
+Epoch [54/100] lr=6.25e-06 train_loss=0.0481 train_bce_obj=0.0477 train_cf=0.0000 train_obj=0.0477 val_loss=0.4437 val_auc=0.9287 val_aupr=0.9279 val_acc=0.8551 val_f1=0.8543 val_acc@0.5=0.8522 val_f1@0.5=0.8550 val_thr=0.65 test_loss=0.4312 test_auc=0.9314 test_aupr=0.9354 test_acc=0.8609 test_f1=0.8590 test_acc@0.5=0.8595 test_f1@0.5=0.8602 early_stop=8/10
+Epoch time: train=20.63s val=2.60s test=3.75s checkpoint=saved_last, pruned=1/0.06s total=27.05s
+Epoch [55/100] lr=6.25e-06 train_loss=0.0481 train_bce_obj=0.0477 train_cf=0.0000 train_obj=0.0477 val_loss=0.4446 val_auc=0.9288 val_aupr=0.9278 val_acc=0.8577 val_f1=0.8558 val_acc@0.5=0.8540 val_f1@0.5=0.8572 val_thr=0.72 test_loss=0.4333 test_auc=0.9317 test_aupr=0.9357 test_acc=0.8626 test_f1=0.8595 test_acc@0.5=0.8609 test_f1@0.5=0.8623 early_stop=9/10
+Epoch time: train=20.55s val=2.65s test=3.72s checkpoint=saved_last, pruned=1/0.06s total=26.99s
+Epoch [56/100] lr=6.25e-06 train_loss=0.0480 train_bce_obj=0.0477 train_cf=0.0000 train_obj=0.0477 val_loss=0.4417 val_auc=0.9297 val_aupr=0.9290 val_acc=0.8584 val_f1=0.8553 val_acc@0.5=0.8540 val_f1@0.5=0.8574 val_thr=0.75 test_loss=0.4323 test_auc=0.9317 test_aupr=0.9362 test_acc=0.8638 test_f1=0.8596 test_acc@0.5=0.8607 test_f1@0.5=0.8618 early_stop=10/10
+reduce lr: 6.25e-06 -> 3.125e-06
+early stopping at epoch 56
+Epoch time: train=20.84s val=2.52s test=3.73s checkpoint=saved_last, pruned=1/0.06s total=27.16s
+best_metric: val/auroc
+best_score: 0.9302182722113875
+best_epoch: 46
+best_val: {'loss': 0.42488197413007694, 'auc': 0.9302182722113875, 'auroc': 0.9302182722113875, 'aupr': 0.9299843706612134, 'auprc': 0.9299843706612134, 'acc': 0.8576629049872588, 'accuracy': 0.8576629049872588, 'acc_05': 0.8536585365853658, 'f1': 0.8576629049872588, 'f1_05': 0.8567355666429081, 'threshold': 0.63, 'pred_mean': 0.5118519480108136, 'pred_pos_rate': 0.4910811794685111, 'pred_pos_rate_05': 0.5125591554423007}
+best_test: {'loss': 0.41949690307356413, 'auc': 0.9320844701097404, 'auroc': 0.9320844701097404, 'aupr': 0.9371515881050709, 'auprc': 0.9371515881050709, 'acc': 0.8623702894593118, 'accuracy': 0.8623702894593118, 'acc_05': 0.8623702894593118, 'f1': 0.860875966139124, 'f1_05': 0.8630434782608696, 'threshold': 0.63, 'pred_mean': 0.50711547417969, 'pred_pos_rate': 0.4889859821591116, 'pred_pos_rate_05': 0.5046422719825232}
+end time: 2026-06-29 18:58:02.953043
+Total running time: 1523.99s
+[2026-06-29 18:58:06,558] [INFO] [launch.py:367:main] Process 78090 exits successfully.
+[2026-06-29 18:58:06,558] [INFO] [launch.py:367:main] Process 78088 exits successfully.
+[2026-06-29 18:58:06,559] [INFO] [launch.py:367:main] Process 78095 exits successfully.
+[2026-06-29 18:58:07,561] [INFO] [launch.py:367:main] Process 78094 exits successfully.
+[2026-06-29 18:58:07,561] [INFO] [launch.py:367:main] Process 78089 exits successfully.
+[2026-06-29 18:58:07,562] [INFO] [launch.py:367:main] Process 78092 exits successfully.
+[2026-06-29 18:58:07,563] [INFO] [launch.py:367:main] Process 78091 exits successfully.
+[2026-06-29 18:58:07,564] [INFO] [launch.py:367:main] Process 78093 exits successfully.
