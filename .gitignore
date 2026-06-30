@@ -1,5 +1,7 @@
 model/
-outputs/
+outputs/*
+!outputs/interpretability/
+outputs/interpretability/**/*.pt
 /data/
 cache/
 .cursor/
