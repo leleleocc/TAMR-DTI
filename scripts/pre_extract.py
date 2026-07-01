@@ -33,6 +33,40 @@ PROTEIN_FEATURE_LEN = 128
 PROTEIN_REPLACE_AA = str.maketrans({"U": "X", "Z": "X", "O": "X", "B": "X"})
 FEATURE_SCHEMA_VERSION = 3
 
+# ---- D1: geometry-aware atom features (only used when --drug3d_feature_variant != "vanilla") ----
+# There are two geometry variants:
+#
+#   geo_v1 (D1 minimal fix): whole-molecule SE(3)-invariant descriptors
+#     broadcast to every atom of the conformer. Makes feature[k] vary across K
+#     but leaves feature[k, i] atom-invariant on the geo block. 10 dims / atom.
+#
+#   geo_v2 (per-atom local geometry, this PR): SE(3)-invariant descriptors
+#     computed independently for each atom of each conformer, so
+#     feature[k, i] varies across BOTH k and i on the geo block. This gives
+#     the EGNN / score MLP a per-(atom, conformer) K-varying signal, which
+#     is what the original vanilla cache was missing. 12 dims / atom.
+#
+# DRUG_3D_GEO_RBF_CENTERS spans a typical bond-to-mid-range neighborhood (Å).
+# Choosing fixed centers (rather than learnable) keeps the feature reproducible across cache builds.
+DRUG_3D_GEO_RBF_CENTERS = (1.0, 1.5, 2.0, 2.5, 3.5, 5.0)  # 6 centers
+DRUG_3D_GEO_RBF_GAMMA = 1.0                                # exp(-gamma * (d - c)^2)
+DRUG_3D_GEO_FEATURE_DIM = 4 + len(DRUG_3D_GEO_RBF_CENTERS)  # min/mean/std/max + RBF sums -> 10
+
+# geo_v2 per-atom local geometry:
+DRUG_3D_GEO_V2_FEATURE_DIM = 12          # see per_atom_geometry_descriptor layout below
+DRUG_3D_GEO_V2_DENSITY_RADII = (2.0, 4.0, 6.0)   # three scales for local density
+DRUG_3D_GEO_V2_RBF_CENTERS = (1.5, 2.5)          # nn1 RBFs (single bond, 1-3 distance)
+DRUG_3D_GEO_V2_RBF_SIGMA = 0.5                   # Å
+DRUG_3D_GEO_V2_ANGLE_RADIUS = 4.0                # Å, defines "local neighbors" for triplet angles
+DRUG_3D_GEO_V2_PLANE_RADIUS = 3.0                # Å, defines the atom-local plane-fit neighborhood
+
+# variants -> (cache_filename_suffix, geometry_mode) where geometry_mode in {"none", "v1", "v2"}
+DRUG_3D_FEATURE_VARIANTS = {
+    "vanilla": ("", "none"),
+    "geo_v1": ("_geo_v1", "v1"),
+    "geo_v2": ("_geo_v2", "v2"),
+}
+
 
 def default_drug3d_workers():
     cpu_count = os.cpu_count() or 1
@@ -160,6 +194,180 @@ def atom_features(atom):
         + one_of_k_encoding_unk(atom.GetTotalNumHs(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         + [atom.GetIsAromatic()]
     )
+
+
+def geometry_descriptor(coordinates):
+    """Compute per-atom SE(3)-invariant geometric descriptors from absolute coords.
+
+    Returns (N, DRUG_3D_GEO_FEATURE_DIM) float64 array. The result depends on the
+    conformer geometry (and so varies across K), but is invariant to global
+    rotation / translation because it is derived from pairwise distances only.
+
+    Layout per atom i:
+        [d_min_i, d_mean_i, d_std_i, d_max_i,
+         Σ_{j != i} exp(-γ (d_ij - c_b)^2)   for b = 1..len(RBF_CENTERS)]
+    """
+    coordinates = np.asarray(coordinates, dtype=np.float64)
+    n = coordinates.shape[0]
+    geo = np.zeros((n, DRUG_3D_GEO_FEATURE_DIM), dtype=np.float64)
+    if n <= 1:
+        return geo
+
+    # pairwise distance matrix; diagonal set to a large value so it doesn't
+    # affect min / RBF sums.
+    diff = coordinates[:, None, :] - coordinates[None, :, :]
+    dist = np.sqrt(np.einsum("ijk,ijk->ij", diff, diff))
+    mask_self = np.eye(n, dtype=bool)
+    safe_dist = np.where(mask_self, np.inf, dist)
+
+    d_min = safe_dist.min(axis=1)
+    finite = np.where(mask_self, 0.0, dist)
+    sum_d = finite.sum(axis=1)
+    denom = float(n - 1)
+    d_mean = sum_d / denom
+    var_d = ((finite - d_mean[:, None]) ** 2).sum(axis=1) / denom - (d_mean ** 2) * 0.0
+    var_d = np.maximum(var_d, 0.0)
+    d_std = np.sqrt(var_d)
+    masked = np.where(mask_self, -np.inf, dist)
+    d_max = masked.max(axis=1)
+
+    geo[:, 0] = d_min
+    geo[:, 1] = d_mean
+    geo[:, 2] = d_std
+    geo[:, 3] = d_max
+
+    # RBF sums: Σ_{j != i} exp(-γ (d_ij - c)^2). The (j == i) term contributes
+    # exp(-γ c^2), which is constant across atoms (and small), so subtracting
+    # the self diagonal post-hoc is fine.
+    gamma = float(DRUG_3D_GEO_RBF_GAMMA)
+    for b, center in enumerate(DRUG_3D_GEO_RBF_CENTERS):
+        rbf_full = np.exp(-gamma * (dist - center) ** 2)
+        rbf_self = np.exp(-gamma * center ** 2)  # scalar; from j == i
+        geo[:, 4 + b] = rbf_full.sum(axis=1) - rbf_self
+
+    return geo
+
+
+def per_atom_geometry_descriptor(coordinates):
+    """Compute per-atom SE(3)-invariant *local* geometric descriptors.
+
+    Returns (N, DRUG_3D_GEO_V2_FEATURE_DIM) float64 array. Unlike
+    :func:`geometry_descriptor` whose output was later broadcast, this one
+    gives each atom of each conformer its own descriptor vector, so
+    feature[k, i] on the geo block varies along BOTH the conformer axis k
+    AND the atom axis i.
+
+    All entries are derived from pairwise distances or angles, so the
+    result is invariant to global rotation / translation (SE(3)-inv).
+
+    Layout per atom i (12 dims total):
+        0  dist_to_COM               center-of-mass distance
+        1  dist_to_COM_norm          (0) / radius_of_gyration
+        2  local_density_2A          #(j != i) with d_ij <= 2A / (N - 1)
+        3  local_density_4A          same at 4A
+        4  local_density_6A          same at 6A
+        5  nn1_dist                  distance to nearest other atom
+        6  nn1_rbf_1.5A              exp(-((5) - 1.5)^2 / 2*sigma^2)
+        7  nn1_rbf_2.5A              exp(-((5) - 2.5)^2 / 2*sigma^2)
+        8  mean_angle                mean of triplet angles (i as apex,
+                                     two neighbors within angle-radius)
+        9  std_angle                 std of the same triplet angles
+        10 planarity                 |x_i - plane| for plane fit through
+                                     atoms within plane-radius of i
+        11 gyration_contrib          |x_i - x_COM|^2 / sum_j |x_j - x_COM|^2
+
+    Physical rationale is documented at length in the collapse-fix design
+    doc; every dim is a single physically meaningful geometric quantity.
+    """
+    coordinates = np.asarray(coordinates, dtype=np.float64)
+    n = coordinates.shape[0]
+    out = np.zeros((n, DRUG_3D_GEO_V2_FEATURE_DIM), dtype=np.float64)
+    if n <= 1:
+        return out
+
+    # ---- pairwise distance matrix (upper bound on many ops below) ----
+    diff = coordinates[:, None, :] - coordinates[None, :, :]
+    dist = np.sqrt(np.einsum("ijk,ijk->ij", diff, diff))
+    self_mask = np.eye(n, dtype=bool)
+    safe_dist = np.where(self_mask, np.inf, dist)   # ignore self on min / kNN
+
+    # ---- 1..2: distance to COM & normalized radius ----
+    com = coordinates.mean(axis=0)                  # (3,)
+    d_com = np.linalg.norm(coordinates - com, axis=1)   # (n,)
+    r_gyration = float(np.sqrt(np.mean(d_com ** 2))) or 1.0
+    out[:, 0] = d_com
+    out[:, 1] = d_com / r_gyration
+
+    # ---- 3..5: local density at three scales ----
+    denom = float(n - 1) if n > 1 else 1.0
+    for j, radius in enumerate(DRUG_3D_GEO_V2_DENSITY_RADII):
+        # Count neighbors strictly inside radius (self excluded via safe_dist=inf)
+        within = (safe_dist <= radius).sum(axis=1).astype(np.float64)
+        out[:, 2 + j] = within / denom
+
+    # ---- 6..8: nearest-neighbor distance + two RBFs ----
+    nn1 = safe_dist.min(axis=1)                     # (n,)
+    out[:, 5] = nn1
+    sigma = float(DRUG_3D_GEO_V2_RBF_SIGMA)
+    denom_rbf = 2.0 * sigma * sigma
+    for j, center in enumerate(DRUG_3D_GEO_V2_RBF_CENTERS):
+        out[:, 6 + j] = np.exp(-((nn1 - center) ** 2) / denom_rbf)
+
+    # ---- 9..10: triplet angle stats (i as apex, neighbors within radius) ----
+    # For each atom i, take neighbor set N_i = {j : d_ij <= angle_radius, j != i}.
+    # Compute the pairwise angles (v_ij, v_ik) for j < k in N_i and take
+    # mean / std over the resulting set. This captures sp2 / sp3 / bond-angle
+    # deformation without depending on the RDKit adjacency (which is fixed
+    # across conformers and would not distinguish conformer geometries).
+    r_ang = float(DRUG_3D_GEO_V2_ANGLE_RADIUS)
+    for i in range(n):
+        nbr_idx = np.where((safe_dist[i] <= r_ang))[0]
+        if nbr_idx.size < 2:
+            continue
+        v = coordinates[nbr_idx] - coordinates[i]           # (m, 3)
+        norms = np.linalg.norm(v, axis=1)                   # (m,)
+        norms_safe = np.where(norms > 1e-8, norms, 1.0)
+        u = v / norms_safe[:, None]                         # unit vectors
+        cos = np.clip(u @ u.T, -1.0, 1.0)
+        iu = np.triu_indices(nbr_idx.size, k=1)
+        cos_pairs = cos[iu]
+        valid = (norms[iu[0]] > 1e-8) & (norms[iu[1]] > 1e-8)
+        cos_pairs = cos_pairs[valid]
+        if cos_pairs.size == 0:
+            continue
+        angles = np.arccos(cos_pairs)
+        out[i, 8] = float(angles.mean())
+        out[i, 9] = float(angles.std())
+
+    # ---- 11: planarity (distance from atom to plane fitted through nbrs) ----
+    r_plane = float(DRUG_3D_GEO_V2_PLANE_RADIUS)
+    for i in range(n):
+        nbr_idx = np.where(safe_dist[i] <= r_plane)[0]
+        if nbr_idx.size < 3:
+            continue
+        pts = coordinates[nbr_idx]                  # (m, 3)
+        centroid = pts.mean(axis=0)
+        centered = pts - centroid
+        try:
+            _, sv, vh = np.linalg.svd(centered, full_matrices=False)
+        except np.linalg.LinAlgError:
+            continue
+        if sv.size < 3 or (sv[-1] < 1e-8 and sv[1] < 1e-8):
+            continue
+        normal = vh[-1]
+        normal = normal / (np.linalg.norm(normal) + 1e-12)
+        out[i, 10] = float(abs(np.dot(coordinates[i] - centroid, normal)))
+
+    # ---- 12: gyration contribution ----
+    total_r2 = float(np.sum(d_com ** 2))
+    if total_r2 > 1e-12:
+        out[:, 11] = (d_com ** 2) / total_r2
+    else:
+        out[:, 11] = 0.0
+
+    return out
+
+
 def pool_drug_3d_sample(feature, coor):
     if feature.size == 0 or coor.size == 0:
         return (
@@ -176,19 +384,27 @@ def pool_drug_3d_sample(feature, coor):
             torch.zeros(DRUG_3D_ATOM_COUNT, 3, dtype=torch.float32),
         )
 
-    feature = feature.transpose(0, 1).unsqueeze(0)
+    feature = feature.transpose(0, 1).unsqueeze(0)                      # (1, D_feat, N)
     feature = F.adaptive_avg_pool1d(feature, DRUG_3D_ATOM_COUNT).squeeze(0).transpose(0, 1)
     if feature.size(1) < DRUG_3D_FEATURE_DIM:
         feature = F.pad(feature, (0, DRUG_3D_FEATURE_DIM - feature.size(1)))
     elif feature.size(1) > DRUG_3D_FEATURE_DIM:
         feature = feature[:, :DRUG_3D_FEATURE_DIM]
 
-    coor = coor.unsqueeze(0).unsqueeze(1)
-    coor = F.interpolate(coor, size=(DRUG_3D_ATOM_COUNT, 3), mode="nearest")
-    coor = coor.squeeze(0).squeeze(0)
+    # Use the SAME adaptive_avg_pool1d bin structure for coor so that
+    # feature[i] and coor[i] represent the same bin (bin-mean of the same
+    # subset of original atoms). Historically coor used
+    # F.interpolate(mode="nearest") which picked one original atom per bin
+    # while feature averaged, so feature[i] and coor[i] pointed to
+    # semantically different summaries of the atoms in bin i. Matching the
+    # pool operator makes the geo_v2 dim-0 (bin-avg of per-atom dist_to_COM)
+    # numerically consistent with dist(bin-avg-coor, molecule COM) up to
+    # Jensen slack.
+    coor = coor.transpose(0, 1).unsqueeze(0)                            # (1, 3, N)
+    coor = F.adaptive_avg_pool1d(coor, DRUG_3D_ATOM_COUNT).squeeze(0).transpose(0, 1)  # (64, 3)
 
     return feature, coor
-def build_raw_3d_conformers(smile, num_conformers):
+def build_raw_3d_conformers(smile, num_conformers, geometry_mode="none"):
     try:
         mol = Chem.MolFromSmiles(smile)
         if mol is None:
@@ -223,22 +439,35 @@ def build_raw_3d_conformers(smile, num_conformers):
             except Exception:
                 energy = 0.0
 
-            features = []
+            base_features = []
             coordinates = []
 
             conf = mol.GetConformer(conf_id)
             for atom_idx in range(mol.GetNumAtoms()):
                 atom = mol.GetAtomWithIdx(atom_idx)
                 feature = atom_features(atom)
-                features.append(feature / max(sum(feature), 1.0))
+                base_features.append(feature / max(sum(feature), 1.0))
 
                 pos = conf.GetAtomPosition(atom_idx)
                 coordinates.append(np.array([pos.x, pos.y, pos.z]))
 
+            base_features = np.array(base_features, dtype=np.float64)
+            coordinates = np.array(coordinates, dtype=np.float64)
+            if geometry_mode == "v1":
+                # Whole-molecule descriptors broadcast to every atom.
+                geo = geometry_descriptor(coordinates)
+                combined = np.concatenate([base_features, geo], axis=1)
+            elif geometry_mode == "v2":
+                # Per-atom local descriptors: feature[k, i] varies over both k and i.
+                geo = per_atom_geometry_descriptor(coordinates)
+                combined = np.concatenate([base_features, geo], axis=1)
+            else:
+                combined = base_features
+
             conformers.append(
                 {
-                    "feature": np.array(features),
-                    "coor": np.array(coordinates),
+                    "feature": combined,
+                    "coor": coordinates,
                     "energy": energy,
                 }
             )
@@ -251,7 +480,7 @@ def build_raw_3d_conformers(smile, num_conformers):
         return [], False
 
 
-def build_drug3d_entry(smile, num_conformers, timeout_seconds=0):
+def build_drug3d_entry(smile, num_conformers, timeout_seconds=0, geometry_mode="none"):
     previous_handler = None
     if timeout_seconds and timeout_seconds > 0 and hasattr(signal, "SIGALRM"):
         previous_handler = signal.getsignal(signal.SIGALRM)
@@ -259,7 +488,7 @@ def build_drug3d_entry(smile, num_conformers, timeout_seconds=0):
         signal.alarm(int(timeout_seconds))
 
     try:
-        raw_conformers, ok = build_raw_3d_conformers(smile, num_conformers)
+        raw_conformers, ok = build_raw_3d_conformers(smile, num_conformers, geometry_mode=geometry_mode)
     except Drug3DTimeout as exc:
         logging.warning("Timeout building 3D conformers for SMILES %s: %s", smile, exc)
         raw_conformers, ok = [], False
@@ -320,8 +549,8 @@ def build_empty_drug3d_entry(num_conformers):
     }
 
 
-def build_drug3d_entry_worker(smile, num_conformers, timeout_seconds):
-    return smile, build_drug3d_entry(smile, num_conformers, timeout_seconds)
+def build_drug3d_entry_worker(smile, num_conformers, timeout_seconds, geometry_mode):
+    return smile, build_drug3d_entry(smile, num_conformers, timeout_seconds, geometry_mode=geometry_mode)
 
 
 def serialize_drug3d_entry(entry):
@@ -346,24 +575,28 @@ def deserialize_drug3d_entry(entry):
     }
 
 
-def build_drug3d_process_target(smile, num_conformers, queue):
+def build_drug3d_process_target(smile, num_conformers, queue, geometry_mode):
     try:
-        queue.put(serialize_drug3d_entry(build_drug3d_entry(smile, num_conformers, timeout_seconds=0)))
+        queue.put(
+            serialize_drug3d_entry(
+                build_drug3d_entry(smile, num_conformers, timeout_seconds=0, geometry_mode=geometry_mode)
+            )
+        )
     except Exception as exc:
         logging.warning("Failed isolated drug3d process for SMILES %s: %s", smile, exc)
         queue.put(serialize_drug3d_entry(build_empty_drug3d_entry(num_conformers)))
 
 
-def build_drug3d_entry_isolated(smile, num_conformers, timeout_seconds):
+def build_drug3d_entry_isolated(smile, num_conformers, timeout_seconds, geometry_mode="none"):
     if not timeout_seconds or timeout_seconds <= 0:
-        return build_drug3d_entry(smile, num_conformers, timeout_seconds=0)
+        return build_drug3d_entry(smile, num_conformers, timeout_seconds=0, geometry_mode=geometry_mode)
 
     context_name = "fork" if "fork" in mp.get_all_start_methods() else "spawn"
     context = mp.get_context(context_name)
     queue = context.Queue(maxsize=1)
     process = context.Process(
         target=build_drug3d_process_target,
-        args=(smile, num_conformers, queue),
+        args=(smile, num_conformers, queue, geometry_mode),
     )
     process.start()
 
@@ -407,13 +640,15 @@ def encode_drug3d(
     workers: int,
     save_every: int,
     timeout_seconds: int,
+    geometry_mode: str = "none",
 ):
     cache = prune_invalid_cache(maybe_load_cache(output_path, overwrite), valid_drug3d_entry, "drug 3D")
     missing = [x for x in smiles_list if x not in cache]
 
     print(
         f"[drug3d] total={len(smiles_list)} existing={len(cache)} missing={len(missing)} "
-        f"num_conformers={num_conformers} workers={workers} timeout={timeout_seconds}s"
+        f"num_conformers={num_conformers} workers={workers} timeout={timeout_seconds}s "
+        f"geometry_mode={geometry_mode}"
     )
     if not missing:
         return cache
@@ -424,7 +659,9 @@ def encode_drug3d(
         total = len(missing)
         for offset, smile in enumerate(smiles_to_build, start=1):
             idx = completed + offset
-            cache[smile] = build_drug3d_entry(smile, num_conformers, timeout_seconds)
+            cache[smile] = build_drug3d_entry(
+                smile, num_conformers, timeout_seconds, geometry_mode=geometry_mode
+            )
 
             if idx == 1 or idx == total or idx % 100 == 0:
                 print(f"[drug3d] {idx}/{total}")
@@ -456,6 +693,7 @@ def encode_drug3d(
                         next_smile,
                         num_conformers,
                         timeout_seconds,
+                        geometry_mode,
                     )
                     future_to_smile[future] = next_smile
                     return True
@@ -715,6 +953,20 @@ def main():
     parser.add_argument("--output_dir", default="cache/features")
     parser.add_argument("--chemberta_dir", default="model/ChemBERTa-77M-MTR")
     parser.add_argument("--protbert_dir", default="model/prot_bert")
+    parser.add_argument(
+        "--drug3d_feature_variant",
+        default="vanilla",
+        choices=sorted(DRUG_3D_FEATURE_VARIANTS.keys()),
+        help=(
+            "atom feature variant for the drug 3D cache. "
+            "'vanilla' preserves the original K-invariant atom features (74d -> 128d pad); "
+            "'geo_v1' concatenates whole-molecule SE(3)-invariant descriptors (10d) broadcast to every atom, "
+            "so feature[k] varies across conformers K but is atom-invariant on the geo block; "
+            "'geo_v2' concatenates per-atom SE(3)-invariant local geometry descriptors (12d), "
+            "so feature[k, i] varies across BOTH conformer K and atom i on the geo block. "
+            "Non-vanilla variants are stored under drug3d_features_<variant>.pt to avoid clobbering the main cache."
+        ),
+    )
     args = parser.parse_args()
 
     DRUG_1D_TOKEN_COUNT = args.drug_1d_token_count
@@ -733,8 +985,9 @@ def main():
 
     smiles_cache_path = output_dir / "smiles_features.pt"
     protein_cache_path = output_dir / "protein_features.pt"
-    drug3d_cache_path = output_dir / "drug3d_features.pt"
-    meta_path = output_dir / "meta.json"
+    variant_suffix, geometry_mode = DRUG_3D_FEATURE_VARIANTS[args.drug3d_feature_variant]
+    drug3d_cache_path = output_dir / f"drug3d_features{variant_suffix}.pt"
+    meta_path = output_dir / "meta.json" if args.drug3d_feature_variant == "vanilla" else output_dir / f"meta_drug3d{variant_suffix}.json"
 
     encode_smiles(
         unique_smiles,
@@ -762,6 +1015,7 @@ def main():
         workers=args.drug3d_workers,
         save_every=args.drug3d_save_every,
         timeout_seconds=args.drug3d_timeout,
+        geometry_mode=geometry_mode,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -789,6 +1043,13 @@ def main():
         },
         "drug3d_feature": {
             "type": "multi_conformer_atom_features_adaptive_pool_pad128_with_coordinates",
+            "variant": args.drug3d_feature_variant,
+            "geometry_mode": geometry_mode,
+            "geo_feature_dim": (
+                DRUG_3D_GEO_FEATURE_DIM if geometry_mode == "v1"
+                else DRUG_3D_GEO_V2_FEATURE_DIM if geometry_mode == "v2"
+                else 0
+            ),
             "num_conformers": DRUG_3D_CONFORMER_COUNT,
             "max_heavy_atoms_for_etkdg": DRUG_3D_MAX_HEAVY_ATOMS,
             "shape": [DRUG_3D_CONFORMER_COUNT, DRUG_3D_ATOM_COUNT, DRUG_3D_FEATURE_DIM],

@@ -97,15 +97,15 @@ def _normalize_drug3d_entry(entry):
     return norm_feature, norm_coor, conf_mask, energy
 
 
-def load_feature_cache(cache_dir):
+def load_feature_cache(cache_dir, drug3d_cache_name="drug3d_features.pt"):
     cache_dir = Path(cache_dir)
-    cache_key = str(cache_dir.resolve())
+    cache_key = (str(cache_dir.resolve()), drug3d_cache_name)
     if cache_key in FEATURE_CACHE_BY_DIR:
         return FEATURE_CACHE_BY_DIR[cache_key]
 
     smiles_path = cache_dir / "smiles_features.pt"
     protein_path = cache_dir / "protein_features.pt"
-    drug3d_path = cache_dir / "drug3d_features.pt"
+    drug3d_path = cache_dir / drug3d_cache_name
 
     if not smiles_path.exists():
         raise FileNotFoundError(
@@ -120,7 +120,7 @@ def load_feature_cache(cache_dir):
     if not drug3d_path.exists():
         raise FileNotFoundError(
             f"Missing drug 3D feature cache: {drug3d_path}. "
-            "Run scripts/pre_extract.py before training."
+            "Run scripts/pre_extract.py (with --drug3d_feature_variant if using a non-vanilla cache) before training."
         )
 
     smiles_cache = torch.load(smiles_path, map_location="cpu", weights_only=True)
@@ -132,7 +132,15 @@ def load_feature_cache(cache_dir):
 
 class DTIDataset(data.Dataset):
 
-    def __init__(self, list_IDs,  df, cache_dir, max_drug_nodes=290, graph_cache_size=2048):
+    def __init__(
+        self,
+        list_IDs,
+        df,
+        cache_dir,
+        max_drug_nodes=290,
+        graph_cache_size=2048,
+        drug3d_cache_name="drug3d_features.pt",
+    ):
         self.list_IDs = list_IDs
         self.df = df
         self.max_drug_nodes = max_drug_nodes
@@ -141,7 +149,9 @@ class DTIDataset(data.Dataset):
         self.atom_featurizer = CanonicalAtomFeaturizer()
         self.bond_featurizer = CanonicalBondFeaturizer(self_loop=True)
         self.fc = partial(smiles_to_bigraph, add_self_loop=True)
-        self.smiles_cache, self.protein_cache, self.drug3d_cache = load_feature_cache(cache_dir)
+        self.smiles_cache, self.protein_cache, self.drug3d_cache = load_feature_cache(
+            cache_dir, drug3d_cache_name=drug3d_cache_name,
+        )
         self.all_smiles = self.df["SMILES"].astype(str).tolist()
         self.all_proteins = self.df["Protein"].astype(str).tolist()
 

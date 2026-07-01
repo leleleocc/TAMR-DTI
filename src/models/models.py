@@ -55,16 +55,110 @@ def masked_mean(inputs, mask=None, dim=1):
 
 
 class TargetAwareConformerEncoder(nn.Module):
-    def __init__(self, dim=128, use_target_aware=True):
+    """Score-MLP-based conformer selector, with configurable score-input mode.
+
+    The three modes address the collapse diagnostic reported in
+    ``outputs/interpretability/biosnap_seed42/conformer_collapse_diagnostic.md``:
+
+    - ``with_protein`` (default, legacy): cat([conf_global, protein_global(broadcast), energy_emb])
+      The protein_global block is broadcast across K, so 128/384 dims have zero
+      variance along K. This structural "zero-variance subspace" is one factor
+      that causes score-MLP weight collapse.
+    - ``no_protein``: cat([conf_global, energy_emb]).  The zero-variance subspace
+      is removed; the score MLP now sees only signals that actually differ
+      across K.
+    - ``protein_ctx``: cat([conf_global, protein_ctx, energy_emb]).  Instead of
+      broadcasting, we use a lightweight cross-attention with the conformer as
+      query and protein tokens as key/value, producing K different context
+      vectors — the "target-aware" story becomes literal.
+    """
+
+    def __init__(
+        self,
+        dim=128,
+        use_target_aware=True,
+        score_input_mode="with_protein",
+        protein_ctx_num_heads=4,
+    ):
         super(TargetAwareConformerEncoder, self).__init__()
         self.use_target_aware = use_target_aware
+        self.score_input_mode = str(score_input_mode)
+        if self.score_input_mode not in {"with_protein", "no_protein", "protein_ctx"}:
+            raise ValueError(
+                f"Unsupported score_input_mode={self.score_input_mode}; "
+                "expected 'with_protein', 'no_protein', or 'protein_ctx'."
+            )
+
         self.egnn = EGNN(dim=dim)
         self.energy_proj = nn.Linear(1, dim)
+
+        if self.score_input_mode == "no_protein":
+            score_in_dim = dim * 2
+        else:
+            score_in_dim = dim * 3
+
         self.score = nn.Sequential(
-            nn.Linear(dim * 3, dim),
+            nn.Linear(score_in_dim, dim),
             nn.SiLU(),
             nn.Linear(dim, 1),
         )
+
+        if self.score_input_mode == "protein_ctx":
+            heads = max(1, min(protein_ctx_num_heads, dim))
+            while dim % heads != 0 and heads > 1:
+                heads -= 1
+            self.protein_ctx_attn = nn.MultiheadAttention(
+                embed_dim=dim,
+                num_heads=heads,
+                batch_first=True,
+            )
+        else:
+            self.protein_ctx_attn = None
+
+    def _protein_summary(self, protein_tokens, protein_mask, num_conformers, conf_global):
+        """Return a [B, K, dim] tensor to be concatenated into the score input."""
+        if self.score_input_mode == "no_protein":
+            return None
+
+        if self.score_input_mode == "with_protein":
+            protein_global = masked_mean(protein_tokens, protein_mask, dim=1)
+            return protein_global.unsqueeze(1).expand(-1, num_conformers, -1)
+
+        # protein_ctx: cross-attention with query = conf_global (per-K), K/V = protein_tokens
+        # key_padding_mask: True indicates padding (to be ignored). We build it from protein_mask
+        # only when it is safe — if the mask is all-False for a sample, cross-attention would
+        # produce NaN, so we fall back to a no-mask attention for those samples.
+        if protein_mask is None:
+            key_padding_mask = None
+        else:
+            mask_bool = protein_mask.to(torch.bool)
+            # If any row has zero valid tokens, disable the padding mask to avoid NaN.
+            if (~mask_bool).all(dim=1).any() or mask_bool.all(dim=1).all():
+                # Handle the all-valid case cleanly (no mask needed).
+                if mask_bool.all():
+                    key_padding_mask = None
+                else:
+                    # For rows with no valid tokens, allow attention over all keys.
+                    safe = mask_bool.clone()
+                    empty_rows = (~mask_bool).all(dim=1)
+                    safe[empty_rows] = True
+                    key_padding_mask = ~safe
+            else:
+                key_padding_mask = ~mask_bool
+
+        # conf_global: [B, K, dim] -> reuse as B*K queries against the same protein sequence.
+        batch_size = conf_global.size(0)
+        query = conf_global  # [B, K, dim]
+        key = protein_tokens
+        value = protein_tokens
+        ctx, _ = self.protein_ctx_attn(
+            query=query,
+            key=key,
+            value=value,
+            key_padding_mask=key_padding_mask,
+            need_weights=False,
+        )
+        return ctx  # [B, K, dim]
 
     def forward(self, feature, coor, conf_mask, energy, protein_tokens, protein_mask=None):
         if feature.ndim == 3:
@@ -82,10 +176,14 @@ class TargetAwareConformerEncoder(nn.Module):
         conf_global = conf_tokens.mean(dim=2)
 
         if self.use_target_aware:
-            protein_global = masked_mean(protein_tokens, protein_mask, dim=1)
-            protein_global = protein_global.unsqueeze(1).expand(-1, num_conformers, -1)
             energy_emb = self.energy_proj(energy.unsqueeze(-1).to(dtype=conf_global.dtype))
-            score_input = torch.cat([conf_global, protein_global, energy_emb], dim=-1)
+            protein_summary = self._protein_summary(
+                protein_tokens, protein_mask, num_conformers, conf_global,
+            )
+            if protein_summary is None:
+                score_input = torch.cat([conf_global, energy_emb], dim=-1)
+            else:
+                score_input = torch.cat([conf_global, protein_summary, energy_emb], dim=-1)
             logits = self.score(score_input).squeeze(-1)
         else:
             logits = torch.zeros(
@@ -125,6 +223,7 @@ class LDMDTI(nn.Module):
         cross_layer = config['CROSSINTENTION']['LAYER']
         use_target_aware_conf = config["DRUG"]["USE_TARGET_AWARE_CONF"]
         fusion_gate_bias = config["DRUG"].get("FUSION_GATE_BIAS", -0.85)
+        score_input_mode = config["DRUG"].get("CONF_SCORE_INPUT_MODE", "with_protein")
         use_ligand_film = config["PROTEIN"]["USE_LIGAND_FILM"]
         film_scale = config["PROTEIN"]["FILM_SCALE"]
         fusion_mode = config["CROSSINTENTION"].get("FUSION_MODE", None)
@@ -155,6 +254,7 @@ class LDMDTI(nn.Module):
         self.drug_encoding = TargetAwareConformerEncoder(
             dim=cross_emb_dim,
             use_target_aware=use_target_aware_conf,
+            score_input_mode=score_input_mode,
         )
         self.drug_extractor = MolecularGCN(in_feats=drug_in_feats, dim_embedding=drug_embedding,
                                            padding=drug_padding,
@@ -294,6 +394,8 @@ class LDMDTI(nn.Module):
             "protein_tokens": protein_tokens,
             "protein_mask": protein_mask,
             "conformer_weight": conf_weight,
+            "conformer_mask": conf_mask,
+            "conformer_energy": energy,
             "drug_geo_ctx": drug_geo_ctx,
         }
         if return_aux:
@@ -390,6 +492,116 @@ class LDMDTI(nn.Module):
                 "cf_stable_weighted": stable_weighted.detach(),
                 "cf_entropy_raw": entropy_raw.detach(),
                 "cf_entropy_weighted": entropy_weighted.detach(),
+            }
+        return loss
+
+    def conformer_diversity_loss(
+        self,
+        aux,
+        rank_weight=0.0,
+        rank_margin=0.05,
+        entropy_weight=0.0,
+        return_parts=False,
+    ):
+        """Auxiliary loss to prevent conformer score MLP collapse.
+
+        Two independent (opt-in via cfg weights) terms operating on
+        conf_weight = softmax(score_logits) of shape [B, K]:
+
+        1. rank_term (UFF-energy-margin ranking): among *valid* conformer
+           pairs (i, j) of the same molecule where energy[i] < energy[j] − eps,
+           require conf_weight[i] >= conf_weight[j] + rank_margin. This
+           anchors the direction of the score MLP to a physically meaningful
+           low-energy preference, giving score.* a non-vanishing gradient
+           even when the classification head is happy with uniform pooling.
+
+        2. neg_entropy_term (weak negative entropy):
+           +entropy_weight * (-H(conf_weight))
+           i.e. minimize -H = maximize H is uniform bias; here we use the
+           opposite sign — minimize +(-H) = minimize H — to push away from
+           uniform without over-committing. This directly attacks softmax
+           Jacobian shrinkage near uniform (collapse factor #2). Should
+           stay small (~1e-3) to avoid over-confident single-mode weights.
+
+        Both terms are computed only over samples with >=2 valid conformers;
+        molecules with a single conformer contribute 0. Returns a scalar
+        Tensor loss (0 when both weights are 0).
+        """
+        conf_weight = aux.get("conformer_weight")
+        if conf_weight is None:
+            zero = torch.zeros((), device=next(self.parameters()).device)
+            if return_parts:
+                return zero, {
+                    "conf_rank_raw": zero,
+                    "conf_rank_weighted": zero,
+                    "conf_neg_entropy_raw": zero,
+                    "conf_neg_entropy_weighted": zero,
+                }
+            return zero
+
+        device = conf_weight.device
+        dtype = conf_weight.dtype
+        conf_mask = aux.get("conformer_mask")
+        energy = aux.get("conformer_energy")
+
+        rank_weight = float(rank_weight)
+        entropy_weight = float(entropy_weight)
+
+        rank_raw = torch.zeros((), device=device, dtype=dtype)
+        neg_entropy_raw = torch.zeros((), device=device, dtype=dtype)
+
+        # --- rank term (only if enabled AND we have energy+mask) ---
+        if rank_weight > 0 and energy is not None and conf_mask is not None:
+            energy = energy.to(device=device, dtype=dtype)
+            conf_mask_bool = conf_mask.to(device=device, dtype=torch.bool)
+            valid_pair = conf_mask_bool.unsqueeze(2) & conf_mask_bool.unsqueeze(1)  # [B, K, K]
+            e_i = energy.unsqueeze(2)
+            e_j = energy.unsqueeze(1)
+            energy_gap = e_j - e_i  # positive when e_j > e_i, i.e. i is lower-energy
+            energy_ok = energy_gap > 1e-6
+            pair_mask = valid_pair & energy_ok  # only distinct pairs with meaningful E gap
+
+            w_i = conf_weight.unsqueeze(2)  # want w_i high
+            w_j = conf_weight.unsqueeze(1)  # want w_j low
+            violation = F.relu(w_j - w_i + rank_margin)  # [B, K, K]
+            violation = violation * pair_mask.to(dtype=dtype)
+
+            pair_count = pair_mask.to(dtype=dtype).sum().clamp_min(1.0)
+            rank_raw = violation.sum() / pair_count
+
+        # --- weak negative-entropy term ---
+        if entropy_weight > 0:
+            if conf_mask is not None:
+                conf_mask_bool = conf_mask.to(device=device, dtype=torch.bool)
+                # per-sample number of valid conformers
+                n_valid = conf_mask_bool.sum(dim=1).clamp_min(1).to(dtype=dtype)
+                need_entropy = n_valid > 1
+            else:
+                n_valid = torch.full(
+                    (conf_weight.size(0),), float(conf_weight.size(1)), device=device, dtype=dtype
+                )
+                need_entropy = torch.ones_like(n_valid, dtype=torch.bool)
+
+            eps = 1e-8
+            log_w = torch.log(conf_weight.clamp_min(eps))
+            entropy_per_sample = -(conf_weight * log_w).sum(dim=1)  # [B]
+            # ignore samples without >=2 valid conformers (their softmax is trivial)
+            entropy_per_sample = entropy_per_sample * need_entropy.to(dtype=dtype)
+            sample_count = need_entropy.to(dtype=dtype).sum().clamp_min(1.0)
+            entropy_mean = entropy_per_sample.sum() / sample_count
+            # we minimize +entropy => push toward lower entropy (more peaked).
+            neg_entropy_raw = entropy_mean
+
+        rank_weighted = rank_weight * rank_raw
+        neg_entropy_weighted = entropy_weight * neg_entropy_raw
+        loss = rank_weighted + neg_entropy_weighted
+
+        if return_parts:
+            return loss, {
+                "conf_rank_raw": rank_raw.detach(),
+                "conf_rank_weighted": rank_weighted.detach(),
+                "conf_neg_entropy_raw": neg_entropy_raw.detach(),
+                "conf_neg_entropy_weighted": neg_entropy_weighted.detach(),
             }
         return loss
 

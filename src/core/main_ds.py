@@ -24,6 +24,16 @@ from src.models.models import BINDTI, binary_cross_entropy
 DEFAULT_DEEPSPEED_CONFIG = os.path.join("configs", "ds_zero2.json")
 DEFAULT_SWANLAB_LOG_ROOT = "swanlog"
 
+# Keep in sync with scripts/pre_extract.py::DRUG_3D_FEATURE_VARIANTS.
+# {variant_name: cache_filename_suffix}. Empty string means the default
+# 'drug3d_features.pt' cache; other variants (e.g. 'geo_v1', 'geo_v2') use
+# 'drug3d_features<suffix>.pt'.
+DRUG_3D_FEATURE_VARIANT_SUFFIX = {
+    "vanilla": "",
+    "geo_v1": "_geo_v1",
+    "geo_v2": "_geo_v2",
+}
+
 
 def is_dist_ready():
     return dist.is_available() and dist.is_initialized()
@@ -248,19 +258,125 @@ def get_optimizer_param_groups(optimizer):
     return None
 
 
+def _group_lr_mult(group):
+    try:
+        mult = float(group.get("lr_mult", 1.0))
+    except (TypeError, ValueError):
+        mult = 1.0
+    if mult <= 0:
+        mult = 1.0
+    return mult
+
+
 def get_current_lr(optimizer, default_lr):
     param_groups = get_optimizer_param_groups(optimizer)
     if not param_groups:
         return float(default_lr)
-    return float(param_groups[0]["lr"])
+    # Prefer the explicit "base" group so scheduler always operates in base-lr space,
+    # regardless of param-group ordering (e.g. after a param-group split).
+    base_group = None
+    for group in param_groups:
+        if group.get("name") == "base":
+            base_group = group
+            break
+    if base_group is None:
+        base_group = param_groups[0]
+    return float(base_group["lr"]) / _group_lr_mult(base_group)
 
 
 def set_optimizer_lr(optimizer, lr):
     param_groups = get_optimizer_param_groups(optimizer)
     if not param_groups:
         return
+    base_lr = float(lr)
     for group in param_groups:
-        group["lr"] = float(lr)
+        group["lr"] = base_lr * _group_lr_mult(group)
+
+
+def build_optimizer_param_groups(model, cfg):
+    """Build optimizer param groups.
+
+    When cfg.SOLVER.CONF_SCORE_PARAM_GROUP is True, place all parameters whose
+    fully-qualified name starts with 'drug_encoding.score.' into a dedicated
+    'conf_score' group with its own weight_decay (CONF_SCORE_WEIGHT_DECAY, <0
+    means inherit global) and its own lr multiplier (CONF_SCORE_LR_MULT).
+    A per-group 'lr_mult' metadata key is stored so set_optimizer_lr can keep
+    the ratio invariant across plateau-scheduler decays.
+    """
+    base_lr = float(cfg.SOLVER.LR)
+    global_wd = float(cfg.SOLVER.WEIGHT_DECAY)
+
+    if not getattr(cfg.SOLVER, "CONF_SCORE_PARAM_GROUP", False):
+        return [
+            {
+                "params": [p for p in model.parameters() if p.requires_grad],
+                "lr": base_lr,
+                "weight_decay": global_wd,
+                "name": "base",
+                "lr_mult": 1.0,
+            }
+        ]
+
+    score_prefix = "drug_encoding.score."
+    score_params = []
+    base_params = []
+    score_param_names = []
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+        if name.startswith(score_prefix):
+            score_params.append(param)
+            score_param_names.append(name)
+        else:
+            base_params.append(param)
+
+    if not score_params:
+        warnings.warn(
+            "CONF_SCORE_PARAM_GROUP=True but no parameters matched 'drug_encoding.score.*'; "
+            "falling back to a single param group.",
+            RuntimeWarning,
+        )
+        return [
+            {
+                "params": [p for p in model.parameters() if p.requires_grad],
+                "lr": base_lr,
+                "weight_decay": global_wd,
+                "name": "base",
+                "lr_mult": 1.0,
+            }
+        ]
+
+    conf_score_wd = float(cfg.SOLVER.CONF_SCORE_WEIGHT_DECAY)
+    if conf_score_wd < 0:
+        conf_score_wd = global_wd
+    lr_mult = float(cfg.SOLVER.CONF_SCORE_LR_MULT)
+    if lr_mult <= 0:
+        lr_mult = 1.0
+
+    if is_main_process():
+        print(
+            f"conf_score param group: {len(score_params)} tensors, "
+            f"weight_decay={conf_score_wd:g}, lr_mult={lr_mult:g}"
+        )
+        for name in score_param_names:
+            print(f"  conf_score param: {name}")
+
+    return [
+        {
+            "params": base_params,
+            "lr": base_lr,
+            "weight_decay": global_wd,
+            "name": "base",
+            "lr_mult": 1.0,
+        },
+        {
+            "params": score_params,
+            "lr": base_lr * lr_mult,
+            "weight_decay": conf_score_wd,
+            "name": "conf_score",
+            "lr_mult": lr_mult,
+        },
+    ]
 
 
 def compute_pos_weight(df_train):
@@ -601,9 +717,25 @@ def main():
     if is_main_process():
         print(f"train_pos_weight: {pos_weight_value if pos_weight_value is not None else 'disabled'}")
 
-    train_dataset = DTIDataset(df_train.index.values, df_train, cache_dir=cache_dir)
-    val_dataset = DTIDataset(df_val.index.values, df_val, cache_dir=cache_dir)
-    test_dataset = DTIDataset(df_test.index.values, df_test, cache_dir=cache_dir)
+    drug3d_cache_name = f"drug3d_features{DRUG_3D_FEATURE_VARIANT_SUFFIX.get(cfg.DRUG.DRUG3D_FEATURE_VARIANT, '')}.pt"
+    train_dataset = DTIDataset(
+        df_train.index.values,
+        df_train,
+        cache_dir=cache_dir,
+        drug3d_cache_name=drug3d_cache_name,
+    )
+    val_dataset = DTIDataset(
+        df_val.index.values,
+        df_val,
+        cache_dir=cache_dir,
+        drug3d_cache_name=drug3d_cache_name,
+    )
+    test_dataset = DTIDataset(
+        df_test.index.values,
+        df_test,
+        cache_dir=cache_dir,
+        drug3d_cache_name=drug3d_cache_name,
+    )
 
     world_size = int(os.environ.get("WORLD_SIZE", "1"))
     rank = int(os.environ.get("RANK", "0"))
@@ -647,8 +779,9 @@ def main():
     )
 
     model = BINDTI(device=device, **cfg)
+    optimizer_param_groups = build_optimizer_param_groups(model, cfg)
     optimizer = torch.optim.Adam(
-        model.parameters(),
+        optimizer_param_groups,
         lr=cfg.SOLVER.LR,
         weight_decay=cfg.SOLVER.WEIGHT_DECAY,
     )
@@ -752,6 +885,11 @@ def main():
         epoch_cf_stable_weighted_sum = 0.0
         epoch_cf_entropy_raw_sum = 0.0
         epoch_cf_entropy_weighted_sum = 0.0
+        epoch_conf_div_loss_sum = 0.0
+        epoch_conf_rank_raw_sum = 0.0
+        epoch_conf_rank_weighted_sum = 0.0
+        epoch_conf_neg_entropy_raw_sum = 0.0
+        epoch_conf_neg_entropy_weighted_sum = 0.0
         epoch_sample_count = 0
 
         for batch in train_loader:
@@ -796,6 +934,26 @@ def main():
                 # + CF_KEY_WEIGHT * cf_key_raw
                 # + CF_STABLE_WEIGHT * cf_stable_raw
                 # + FIELD_ENTROPY_WEIGHT * cf_entropy_raw
+
+            conf_div_loss = score.new_tensor(0.0)
+            conf_div_parts = {
+                "conf_rank_raw": score.new_tensor(0.0),
+                "conf_rank_weighted": score.new_tensor(0.0),
+                "conf_neg_entropy_raw": score.new_tensor(0.0),
+                "conf_neg_entropy_weighted": score.new_tensor(0.0),
+            }
+            conf_rank_weight = float(cfg.SOLVER.CONF_DIVERSITY_RANK_WEIGHT)
+            conf_entropy_weight = float(cfg.SOLVER.CONF_DIVERSITY_ENTROPY_WEIGHT)
+            if conf_rank_weight > 0 or conf_entropy_weight > 0:
+                model_for_loss = model_engine.module if hasattr(model_engine, "module") else model_engine
+                conf_div_loss, conf_div_parts = model_for_loss.conformer_diversity_loss(
+                    aux,
+                    rank_weight=conf_rank_weight,
+                    rank_margin=float(cfg.SOLVER.CONF_DIVERSITY_RANK_MARGIN),
+                    entropy_weight=conf_entropy_weight,
+                    return_parts=True,
+                )
+                objective = objective + conf_div_loss
             with torch.no_grad():
                 _, loss = binary_cross_entropy(score, y)
 
@@ -813,6 +971,11 @@ def main():
             epoch_cf_stable_weighted_sum += cf_parts["cf_stable_weighted"].item() * batch_size
             epoch_cf_entropy_raw_sum += cf_parts["cf_entropy_raw"].item() * batch_size
             epoch_cf_entropy_weighted_sum += cf_parts["cf_entropy_weighted"].item() * batch_size
+            epoch_conf_div_loss_sum += conf_div_loss.detach().item() * batch_size
+            epoch_conf_rank_raw_sum += conf_div_parts["conf_rank_raw"].item() * batch_size
+            epoch_conf_rank_weighted_sum += conf_div_parts["conf_rank_weighted"].item() * batch_size
+            epoch_conf_neg_entropy_raw_sum += conf_div_parts["conf_neg_entropy_raw"].item() * batch_size
+            epoch_conf_neg_entropy_weighted_sum += conf_div_parts["conf_neg_entropy_weighted"].item() * batch_size
             epoch_sample_count += batch_size
 
         train_elapsed = time() - epoch_start_time
@@ -847,6 +1010,31 @@ def main():
         )
         avg_train_cf_entropy_weighted = reduce_average(
             epoch_cf_entropy_weighted_sum,
+            epoch_sample_count,
+            model_engine.device,
+        )
+        avg_train_conf_div_loss = reduce_average(
+            epoch_conf_div_loss_sum,
+            epoch_sample_count,
+            model_engine.device,
+        )
+        avg_train_conf_rank_raw = reduce_average(
+            epoch_conf_rank_raw_sum,
+            epoch_sample_count,
+            model_engine.device,
+        )
+        avg_train_conf_rank_weighted = reduce_average(
+            epoch_conf_rank_weighted_sum,
+            epoch_sample_count,
+            model_engine.device,
+        )
+        avg_train_conf_neg_entropy_raw = reduce_average(
+            epoch_conf_neg_entropy_raw_sum,
+            epoch_sample_count,
+            model_engine.device,
+        )
+        avg_train_conf_neg_entropy_weighted = reduce_average(
+            epoch_conf_neg_entropy_weighted_sum,
             epoch_sample_count,
             model_engine.device,
         )
@@ -909,6 +1097,7 @@ def main():
                 f"train_loss={avg_train_loss:.4f} "
                 f"train_bce_obj={avg_train_bce_objective:.4f} "
                 f"train_cf={avg_train_cf_loss:.4f} "
+                f"train_conf_div={avg_train_conf_div_loss:.4f} "
                 f"train_obj={avg_train_objective:.4f} "
                 f"val_loss={val_metrics['loss']:.4f} "
                 f"val_auc={val_metrics['auc']:.4f} "
@@ -945,6 +1134,11 @@ def main():
                     "train/cf_stable_weighted": avg_train_cf_stable_weighted,
                     "train/cf_entropy_raw": avg_train_cf_entropy_raw,
                     "train/cf_entropy_weighted": avg_train_cf_entropy_weighted,
+                    "train/conf_div_loss": avg_train_conf_div_loss,
+                    "train/conf_rank_raw": avg_train_conf_rank_raw,
+                    "train/conf_rank_weighted": avg_train_conf_rank_weighted,
+                    "train/conf_neg_entropy_raw": avg_train_conf_neg_entropy_raw,
+                    "train/conf_neg_entropy_weighted": avg_train_conf_neg_entropy_weighted,
                     "train/objective": avg_train_objective,
                     "train/lr": epoch_lr,
                     "train/next_lr": next_lr,

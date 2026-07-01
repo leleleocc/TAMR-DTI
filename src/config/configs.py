@@ -25,6 +25,23 @@ _C.DRUG.USE_TARGET_AWARE_CONF = True
 # 1D ChemBERTa 分支与 2D+3D 几何分支的融合门初始 bias。
 # sigmoid(bias) 是初始 1D 权重；-2.0≈12% 1D、88% 2D/3D，用于加强几何分支。
 _C.DRUG.FUSION_GATE_BIAS = -2.0
+# Drug-3D 原子特征变体（仅决定离线 cache 文件名以及 atom_features 内容）：
+# - "vanilla": 原 74 维原子特征（与 conformer 无关，feature[k] 跨 K 完全相同）
+# - "geo_v1":  原 74 维 + 10 维 SE(3)-invariant 全分子几何描述符
+#              (per-atom d_min/mean/std/max + 6 维 RBF 求和), broadcast 到全部 atom；
+#              使 feature[k] 沿 K 维不同，但 feature[k, i] 在 geo block 上跨 i 常数。
+# - "geo_v2":  原 74 维 + 12 维 SE(3)-invariant per-atom 局部几何描述符
+#              (dist_to_COM, densities, nn1+RBFs, triplet angles, planarity, gyration),
+#              使 feature[k, i] 沿 K 和 i 两个维度都真正不同。
+_C.DRUG.DRUG3D_FEATURE_VARIANT = "vanilla"
+# TargetAwareConformerEncoder.score MLP 的输入构成模式：
+# - "with_protein": cat([conf_global, protein_global(broadcast), energy_emb]) -- 旧行为；
+#                   protein_global 沿 K 方差为 0，零方差子空间是塌陷的结构性放大器。
+# - "no_protein":   cat([conf_global, energy_emb]) -- 去掉零方差子空间。
+# - "protein_ctx":  cat([conf_global, protein_ctx(per-K), energy_emb])
+#                   protein_ctx[k] 由轻量 cross-attn(query=conf_global[k], key/value=protein_tokens) 得到，
+#                   让蛋白上下文随 conformer 变化。
+_C.DRUG.CONF_SCORE_INPUT_MODE = "with_protein"
 
 
 # Protein feature extractor
@@ -138,6 +155,22 @@ _C.SOLVER.LR_PATIENCE = 5
 _C.SOLVER.MIN_LR = 1e-6
 # Adam weight decay；越大正则越强，可缓解过拟合但可能欠拟合。
 _C.SOLVER.WEIGHT_DECAY = 1e-4
+# 是否将 drug_encoding.score.* 单独建一个 optimizer param group。
+# 配合 SOLVER.CONF_SCORE_WEIGHT_DECAY / SOLVER.CONF_SCORE_LR_MULT 使用；
+# 解释性变体推荐: GROUP=True, WEIGHT_DECAY=0.0, LR_MULT=5.0，破除 collapse 第 3 因子（无对抗 shrinkage）。
+_C.SOLVER.CONF_SCORE_PARAM_GROUP = False
+# 当 CONF_SCORE_PARAM_GROUP=True 时，score MLP 单独的 weight_decay；<0 表示沿用全局 WEIGHT_DECAY。
+_C.SOLVER.CONF_SCORE_WEIGHT_DECAY = 0.0
+# 当 CONF_SCORE_PARAM_GROUP=True 时，score MLP 单独的 lr 倍数（基于 SOLVER.LR）。
+_C.SOLVER.CONF_SCORE_LR_MULT = 5.0
+# Conformer 多样性辅助 loss 权重（基于 UFF energy 的 margin ranking）：
+# 让低能量 conformer 的 conf_weight 显著高于高能量 conformer。0 表示关闭。
+_C.SOLVER.CONF_DIVERSITY_RANK_WEIGHT = 0.0
+# Conformer rank loss margin（在 softmax 概率空间）：要求 w[k_low_E] >= w[k_high_E] + margin。
+_C.SOLVER.CONF_DIVERSITY_RANK_MARGIN = 0.05
+# 弱负熵正则权重：鼓励 conf_weight 远离 uniform；>0 时即使无 rank 监督也避免 softmax 退化。
+# 注意应保持较小（~1e-3）否则会过 confident。0 表示关闭。
+_C.SOLVER.CONF_DIVERSITY_ENTROPY_WEIGHT = 0.0
 # 是否按训练集正负样本比例自动/手动设置 BCE pos_weight。
 _C.SOLVER.USE_POS_WEIGHT = True
 # 正类权重；<=0 时由训练集自动计算，=1.0 基本等价不重加权。

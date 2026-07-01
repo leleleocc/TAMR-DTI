@@ -1,2 +1,0 @@
-drug,target,uniprot,row_index,label,match_type,test_protein_length,uniprot_length
-Gefitinib,EGFR,P00533,5163,1,exact,1210,1210
