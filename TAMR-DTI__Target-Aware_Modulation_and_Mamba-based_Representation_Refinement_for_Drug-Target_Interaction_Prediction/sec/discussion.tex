@@ -29,20 +29,13 @@ TAMR-DTI deliberately keeps attention-based interaction modeling in the final
 fusion stage, because DTI prediction still requires explicit drug-protein
 alignment. Mamba is therefore used as a controlled residual refinement on the
 protein side, not as a wholesale replacement for cross-modal attention. The
-ablation results are the main evidence for this design choice. The
-population-level interpretability statistics on all \InterpNumSamples{} BioSNAP
-test pairs and the DHFR case study in Section~\ref{fig:case_study_dhfr} provide
-two complementary checks on this picture: at the population level the gated
-refinement is small and stable across prediction groups (mean
-$R_t=\InterpMambaRefineMean$, learned gate \InterpMambaGate), and on at least
-one well-characterized target the residue-level refinement aligns with
-UniProt-annotated binding residues (DHFR, fold \CaseStudyDHFRFold,
-$p_{\mathrm{Stouffer}}=\CaseStudyDHFRPComb$, \CaseStudyDHFRNSig{} of
-\CaseStudyDHFRNRows{} TP rows individually significant). The remaining
-curated targets in our case study do not pass the same test, so the
-visualizations should still be read as model-internal evidence and as a
-positive example for DHFR, rather than as a general residue-level
-binding-site predictor.
+ablation results are the main evidence for this design choice. The retained
+interpretability analysis complements this picture from the geometry side by
+showing that conformer usage is sample-specific across all \InterpNumSamples{}
+BioSNAP test pairs, with the lowest-entropy conformer selections showing a
+higher error rate than the highest-entropy selections. These visualizations
+should still be read as model-internal evidence rather than as direct
+structural validation.
 
 Several limitations remain. The reported baselines come from the literature and
 do not provide a fully matched paired-testing protocol. The ablation and
@@ -50,11 +43,9 @@ conformer-count studies are single-seed diagnostics on BioSNAP, so they support
 mechanistic interpretation but should not be treated as formal significance
 tests. The generated conformers are not experimentally resolved binding poses,
 and the current random-split benchmarks do not fully test scaffold-level or
-target-family generalization. The case study is also limited: only
-\CaseStudyNumSigTargets{} of the \CaseStudyNumTargets{} curated UniProt
-targets passes the Stouffer-combined Fisher's-exact test, and the protein-side
-Mamba branch is trained on interaction labels alone without residue-level
-supervision. Future work should therefore use matched multi-seed ablations,
-harder out-of-distribution splits, calibration-aware threshold selection, and
-stronger structural supervision when reliable binding pose or binding-site
-information is available.
+target-family generalization. The interpretability analysis is also limited to
+model-internal conformer-weight behavior and does not validate the generated
+conformers as experimental binding poses. Future work should therefore use
+matched multi-seed ablations, harder out-of-distribution splits,
+calibration-aware threshold selection, and stronger structural supervision when
+reliable binding-pose information is available.

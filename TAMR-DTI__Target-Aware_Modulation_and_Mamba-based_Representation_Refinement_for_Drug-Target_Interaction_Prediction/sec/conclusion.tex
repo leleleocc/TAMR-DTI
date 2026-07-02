@@ -15,19 +15,18 @@ and AUPRC on BindingDB, BioSNAP, Human, and C. elegans, with the
 strongest improvement on BioSNAP. The Human benchmark still prevents a claim of
 uniform superiority because its fixed-threshold scores remain weaker and more
 variable than its ranking metrics. The BioSNAP ablation, conformer-count
-comparison, and interpretability analyses nevertheless provide consistent
-mechanism-level evidence: target-aware conformer aggregation improves ranking
-quality, ligand-conditioned protein modulation affects thresholded decisions,
-and protein-side Mamba refinement contributes a controlled sequence-dependent
-update.
+comparison, and conformer-weight interpretability analysis nevertheless provide
+consistent mechanism-level evidence: target-aware conformer aggregation
+improves ranking quality and produces sample-specific conformer usage, while
+the ablation results indicate that ligand-conditioned protein modulation and
+protein-side Mamba refinement also contribute to the final prediction.
 
 Overall, TAMR-DTI shows that pair-specific molecular geometry and protein-only
 sequence refinement can be integrated without discarding explicit drug-target
 matching. The resulting model is best viewed as a competitive, dataset-dependent
 extension of a strong multimodal DTI backbone. Future work should strengthen the
 evidence with matched multi-seed ablations, harder generalization splits, and
-more direct structural supervision for conformer selection and binding-site
-interpretation.
+more direct structural supervision for conformer selection.
 
 \subsubsection*{Acknowledgments}
 Omitted for anonymous review.
