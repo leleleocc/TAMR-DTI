@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from plot_theme import (
-    BASELINE,
     BASELINE_DARK,
     GRID,
     METRIC_COLORS,
@@ -54,10 +53,31 @@ METRICS = [
     ("f1_05", "F1@0.5"),
 ]
 CI_METRICS = [
+    ("auroc", "AUROC"),
     ("auprc", "AUPRC"),
     ("acc_05", "Acc@0.5"),
     ("f1_05", "F1@0.5"),
 ]
+
+METHOD_COLORS = {
+    "SVM": "#A6761D",
+    "RF": "#D95F02",
+    "KNN": "#66A61E",
+    "LR": "#E7298A",
+    "GraphDTA": "#1B9E77",
+    "DrugBAN": "#E6AB02",
+    "IIFDTI": "#7570B3",
+    "TransformerCPI": "#E15759",
+    "MolTrans": "#9C755F",
+    "BINDTI": "#4E79A7",
+    "LDM-DTI": "#B07AA1",
+    "TAMR-DTI": TAMR,
+}
+
+METHOD_LABELS = {
+    "TransformerCPI": "TransCPI",
+    "TAMR-DTI": "TAMR-DTI",
+}
 
 RUNS = [
     ("BindingDB", 42, "outputs/result/stage2-main-01-full-tamr-dti-n8-bindingdb-seed42/best_metrics.txt"),
@@ -137,6 +157,33 @@ REPORTED_BASELINES: dict[str, dict[str, dict[str, tuple[float, float]]]] = {
         "MolTrans": {"auroc": (0.982, 0.002), "auprc": (0.979, 0.002), "acc_05": (0.916, 0.002), "f1_05": (0.914, 0.002)},
         "BINDTI": {"auroc": (0.985, 0.002), "auprc": (0.984, 0.002), "acc_05": (0.942, 0.001), "f1_05": (0.938, 0.002)},
         "LDM-DTI": {"auroc": (0.988, 0.002), "auprc": (0.986, 0.002), "acc_05": (0.960, 0.002), "f1_05": (0.956, 0.002)},
+    },
+}
+
+MANUSCRIPT_TAMR_SUMMARY: dict[str, dict[str, tuple[float, float]]] = {
+    "BindingDB": {
+        "auroc": (0.964, 0.001),
+        "auprc": (0.954, 0.002),
+        "acc_05": (0.909, 0.003),
+        "f1_05": (0.891, 0.004),
+    },
+    "BioSNAP": {
+        "auroc": (0.930, 0.002),
+        "auprc": (0.935, 0.002),
+        "acc_05": (0.857, 0.004),
+        "f1_05": (0.859, 0.004),
+    },
+    "Human": {
+        "auroc": (0.982, 0.002),
+        "auprc": (0.978, 0.002),
+        "acc_05": (0.930, 0.009),
+        "f1_05": (0.924, 0.009),
+    },
+    "C. elegans": {
+        "auroc": (0.992, 0.001),
+        "auprc": (0.991, 0.001),
+        "acc_05": (0.961, 0.004),
+        "f1_05": (0.961, 0.004),
     },
 }
 
@@ -269,6 +316,21 @@ def summarize(rows: list[dict[str, float | int | str]]) -> list[dict[str, float 
     return summary
 
 
+def manuscript_summary_rows() -> list[dict[str, float | str]]:
+    summary: list[dict[str, float | str]] = []
+    for dataset in DATASETS:
+        out: dict[str, float | str] = {"dataset": dataset}
+        for key, _ in METRICS:
+            mean, std = MANUSCRIPT_TAMR_SUMMARY[dataset][key]
+            ci = 2.776 * std / np.sqrt(5)
+            out[f"{key}_mean"] = mean
+            out[f"{key}_std"] = std
+            out[f"{key}_ci_low"] = mean - ci
+            out[f"{key}_ci_high"] = mean + ci
+        summary.append(out)
+    return summary
+
+
 def baseline_rows() -> list[dict[str, float | str]]:
     rows: list[dict[str, float | str]] = []
     for dataset in DATASETS:
@@ -396,86 +458,6 @@ def save_all(fig, prefix: Path) -> None:
     plt.close(fig)
 
 
-def plot_main_comparison(summary: list[dict[str, float | str]], output_prefix: Path) -> None:
-    summary_by_dataset = {str(row["dataset"]): row for row in summary}
-    fig, axes = plt.subplots(4, 4, figsize=(8.4, 7.8), sharex=False, constrained_layout=False)
-    fig.subplots_adjust(left=0.075, right=0.99, bottom=0.07, top=0.90, hspace=0.43, wspace=0.30)
-    rng = np.random.default_rng(7)
-    baseline_color = BASELINE
-    best_color = BASELINE_DARK
-    tamr_color = TAMR
-
-    for row_idx, dataset in enumerate(DATASETS):
-        for col_idx, (key, label) in enumerate(METRICS):
-            ax = axes[row_idx, col_idx]
-            baseline_values = np.array(
-                [REPORTED_BASELINES[dataset][method][key][0] for method in METHODS],
-                dtype=float,
-            )
-            jitter = rng.uniform(-0.08, 0.08, size=len(baseline_values))
-            ax.scatter(
-                np.zeros(len(baseline_values)) + jitter,
-                baseline_values,
-                s=15,
-                color=baseline_color,
-                alpha=0.48,
-                linewidth=0,
-                label="Reported baselines" if (row_idx, col_idx) == (0, 0) else None,
-            )
-            best_idx = int(np.argmax(baseline_values))
-            ax.scatter(
-                [0],
-                [baseline_values[best_idx]],
-                s=42,
-                marker="D",
-                color=best_color,
-                edgecolor="white",
-                linewidth=0.7,
-                zorder=4,
-                label="Best reported" if (row_idx, col_idx) == (0, 0) else None,
-            )
-            tamr_mean = float(summary_by_dataset[dataset][f"{key}_mean"])
-            tamr_std = float(summary_by_dataset[dataset][f"{key}_std"])
-            ax.errorbar(
-                [0.44],
-                [tamr_mean],
-                yerr=[tamr_std],
-                fmt="*",
-                color=tamr_color,
-                ecolor=tamr_color,
-                elinewidth=1.15,
-                capsize=2.8,
-                markeredgecolor="white",
-                markeredgewidth=0.65,
-                markersize=8.6,
-                zorder=5,
-                label="TAMR-DTI" if (row_idx, col_idx) == (0, 0) else None,
-            )
-            values = np.concatenate([baseline_values, [tamr_mean]])
-            pad = max(0.012, float(values.max() - values.min()) * 0.22)
-            ax.set_ylim(max(0.70, float(values.min()) - pad), min(1.005, float(values.max()) + pad))
-            ax.set_xlim(-0.28, 0.68)
-            ax.set_xticks([0, 0.44])
-            ax.set_xticklabels(["Reported", "TAMR"], rotation=20, ha="right")
-            if row_idx == 0:
-                ax.set_title(label, fontsize=9.5)
-            if col_idx == 0:
-                ax.set_ylabel(dataset, fontsize=9.5)
-            style_axes(ax)
-
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.985),
-        ncol=3,
-        frameon=False,
-        fontsize=8.5,
-    )
-    save_all(fig, output_prefix)
-
-
 def plot_ranking_radar(summary: list[dict[str, float | str]], output_prefix: Path) -> None:
     summary_by_dataset = {str(row["dataset"]): row for row in summary}
     angles = np.linspace(0, 2 * np.pi, len(DATASETS), endpoint=False)
@@ -594,8 +576,9 @@ def plot_ci_intervals(summary: list[dict[str, float | str]], output_prefix: Path
 
 def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_prefix: Path) -> None:
     methods = METHODS + ["TAMR-DTI"]
+    method_labels = [METHOD_LABELS.get(method, method) for method in methods]
     y_positions = np.arange(len(methods))
-    fig, axes = plt.subplots(len(DATASETS), len(CI_METRICS), figsize=(8.5, 8.6), constrained_layout=True)
+    fig, axes = plt.subplots(len(DATASETS), len(CI_METRICS), figsize=(10.2, 8.6), constrained_layout=True)
 
     for row_idx, dataset in enumerate(DATASETS):
         for col_idx, (_, label) in enumerate(CI_METRICS):
@@ -615,8 +598,8 @@ def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_pre
                 high = float(row["ci_high"])
                 lows.append(low)
                 highs.append(high)
-                color = TAMR if method == "TAMR-DTI" else BASELINE
-                marker = "D" if method == "TAMR-DTI" else "o"
+                color = METHOD_COLORS[method]
+                marker = "*" if method == "TAMR-DTI" else "o"
                 ax.errorbar(
                     mean,
                     method_idx,
@@ -624,10 +607,12 @@ def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_pre
                     fmt=marker,
                     color=color,
                     ecolor=color,
-                    elinewidth=1.05 if method == "TAMR-DTI" else 0.75,
-                    capsize=2.4 if method == "TAMR-DTI" else 1.8,
-                    markersize=4.4 if method == "TAMR-DTI" else 2.5,
-                    alpha=0.98 if method == "TAMR-DTI" else 0.55,
+                    elinewidth=1.0 if method == "TAMR-DTI" else 0.68,
+                    capsize=2.2 if method == "TAMR-DTI" else 1.6,
+                    markersize=5.8 if method == "TAMR-DTI" else 2.5,
+                    markeredgecolor="white",
+                    markeredgewidth=0.4,
+                    alpha=0.98 if method == "TAMR-DTI" else 0.82,
                 )
             low = max(0.70, min(lows) - 0.015)
             high = min(1.005, max(highs) + 0.015)
@@ -635,11 +620,11 @@ def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_pre
             ax.set_ylim(-0.75, len(methods) - 0.25)
             ax.invert_yaxis()
             if row_idx == 0:
-                ax.set_title(label, fontsize=9.5)
+                ax.set_title(label, fontsize=9.0)
             if col_idx == 0:
                 ax.set_yticks(y_positions)
-                ax.set_yticklabels(methods, fontsize=7.0)
-                ax.set_ylabel(dataset, fontsize=9.0)
+                ax.set_yticklabels(method_labels, fontsize=6.6)
+                ax.set_ylabel(dataset, fontsize=8.8)
             else:
                 ax.set_yticks(y_positions)
                 ax.set_yticklabels([])
@@ -648,7 +633,7 @@ def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_pre
             ax.spines["right"].set_visible(False)
             ax.spines["left"].set_color("#CBD5E1")
             ax.spines["bottom"].set_color("#CBD5E1")
-            ax.tick_params(axis="x", labelsize=7)
+            ax.tick_params(axis="x", labelsize=6.4)
 
     save_all(fig, output_prefix)
 
@@ -656,8 +641,16 @@ def plot_all_method_ci_comparison(rows: list[dict[str, float | str]], output_pre
 def main() -> None:
     apply_paper_theme(plt)
 
-    rows = load_seed_rows()
-    summary = summarize(rows)
+    try:
+        rows = load_seed_rows()
+        summary = summarize(rows)
+        has_seed_rows = True
+    except FileNotFoundError as exc:
+        print(f"Warning: {exc}")
+        print("Falling back to manuscript TAMR-DTI mean/std values for summary figures.")
+        rows = []
+        summary = manuscript_summary_rows()
+        has_seed_rows = False
     reported_rows = baseline_rows()
     all_rows = combined_rows(summary)
     best_delta_rows = best_reported_delta_rows(summary)
@@ -666,18 +659,21 @@ def main() -> None:
 
     for output_dir in OUTPUT_DIRS:
         output_dir.mkdir(parents=True, exist_ok=True)
-        save_csv(rows, output_dir / "main_seed_metrics.csv")
+        if has_seed_rows:
+            save_csv(rows, output_dir / "main_seed_metrics.csv")
         save_csv(summary, output_dir / "main_results_summary.csv")
         save_csv(reported_rows, output_dir / "reported_baseline_metrics.csv")
         save_csv(all_rows, output_dir / "main_all_method_metrics.csv")
         save_csv(best_delta_rows, output_dir / "main_delta_vs_best_reported.csv")
         save_csv(strongest_delta_rows, output_dir / "main_delta_vs_strongest_prior.csv")
         save_csv(ci_rows, output_dir / "reported_and_tamr_ci_metrics.csv")
-        plot_main_comparison(summary, output_dir / "main_results_comparison")
         plot_ranking_radar(summary, output_dir / "main_ranking_radar")
-        plot_seed_stability(rows, output_dir / "main_seed_stability")
+        if has_seed_rows:
+            plot_seed_stability(rows, output_dir / "main_seed_stability")
         plot_ci_intervals(summary, output_dir / "main_ci_intervals")
         plot_all_method_ci_comparison(ci_rows, output_dir / "all_method_ci_comparison")
+        if not has_seed_rows:
+            print(f"Skipped seed-level outputs in {output_dir} because raw seed rows are unavailable.")
 
     print("Main-result summary:")
     for row in summary:

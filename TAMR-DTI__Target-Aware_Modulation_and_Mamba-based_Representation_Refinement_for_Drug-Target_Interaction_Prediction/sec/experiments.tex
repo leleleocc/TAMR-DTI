@@ -45,6 +45,17 @@ AUROC is the area under the receiver operating characteristic (ROC) curve. For a
 \end{equation}
 The ROC curve varies $\tau$ over the prediction-score range, so AUROC measures positive-negative ranking quality independent of any single threshold. AUROC therefore is not reported with an @0.5 suffix.
 
+At a fixed operating threshold, sensitivity is equivalent to recall or true
+positive rate, while specificity measures the true negative rate:
+\begin{equation}
+\mathrm{Sensitivity}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}, \qquad
+\mathrm{Specificity}(\tau)=\frac{\mathrm{TN}(\tau)}{\mathrm{TN}(\tau)+\mathrm{FP}(\tau)}.
+\end{equation}
+Sensitivity reflects how many true interactions are recovered, whereas
+specificity reflects how many non-interacting pairs are correctly rejected.
+Both metrics depend on the chosen threshold and should therefore be interpreted
+as operating-point metrics rather than ranking metrics.
+
 AUPRC is the area under the precision-recall curve. For threshold $\tau$,
 \begin{equation}
 \mathrm{Precision}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FP}(\tau)}, \qquad
@@ -245,30 +256,19 @@ C. elegans & \textbf{$0.992\pm0.001$} & \textbf{$0.991\pm0.001$} & \textbf{$0.96
 \end{center}
 \end{table}
 
-The same pattern is summarized visually in
-Figure~\ref{fig:main_results_comparison}. The figure includes all reported
-baselines as reference points and places TAMR-DTI as a five-seed mean with
-one-standard-deviation error bars, making the cross-dataset performance profile
-easy to compare.
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\linewidth]{figures/main_results_comparison.pdf}
-\caption{Main result comparison across four datasets and four metrics. Gray points denote reported baselines, dark diamonds denote the best reported value, and blue stars denote TAMR-DTI five-seed means with one-standard-deviation error bars. Acc@0.5 and F1@0.5 are fixed-threshold metrics.}
-\label{fig:main_results_comparison}
-\end{figure}
-
-Figure~\ref{fig:all_method_ci_comparison} provides a complementary uncertainty
-view for AUPRC, Acc@0.5, and F1@0.5. For the reported baselines, intervals are
-computed from the published mean and standard deviation using the same five-run
-$t$-interval formula when those summaries are available; for TAMR-DTI,
-intervals are computed from our five seeds. This view further summarizes how
-the proposed model is positioned relative to the reported uncertainty ranges.
+Figure~\ref{fig:all_method_ci_comparison} summarizes the same comparison as an
+all-method uncertainty view over AUROC, AUPRC, Acc@0.5, and F1@0.5. Intervals
+are computed from the available mean and standard deviation summaries using the
+same five-run $t$-interval formula when those summaries are available; for
+TAMR-DTI, intervals are computed from our five seeds. This view keeps the main
+ranking evidence and the fixed-threshold operating behavior in one visual
+summary, while Table~\ref{tab:baseline_landscape} provides the exact
+AUROC/AUPRC values.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/all_method_ci_comparison.pdf}
-\caption{All-method uncertainty comparison on AUPRC, Acc@0.5, and F1@0.5. Baseline intervals are derived from reported mean and standard deviation values, whereas TAMR-DTI intervals are computed from five local seeds.}
+\caption{All-method uncertainty comparison on AUROC, AUPRC, Acc@0.5, and F1@0.5. Intervals are derived from mean and standard deviation summaries; TAMR-DTI intervals are computed from five local seeds.}
 \label{fig:all_method_ci_comparison}
 \end{figure}
 
