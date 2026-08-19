@@ -52,9 +52,7 @@ def main() -> None:
     counts = df["case_type"].value_counts().to_dict()
     print(f"[data] case_type counts: {counts}")
 
-    fig, axes = plt.subplots(
-        1, 4, figsize=(11.6, 3.2), sharey=True, constrained_layout=True
-    )
+    fig, axes = plt.subplots(1, 4, figsize=(11.6, 3.45), sharey=True)
     ranks = np.arange(1, K + 1)
 
     stats: dict = {"K": K, "n_total": int(len(df)), "groups": {}}
@@ -113,11 +111,15 @@ def main() -> None:
         )
 
     axes[0].set_ylabel("Conformer selection weight", fontsize=10)
-    # shared legend in last axis - place at lower-right to avoid colliding with
-    # the per-axis stats box (top-right corner)
+    # Place the shared legend below all panels so it does not cover the FN curve.
     handles, labels = axes[0].get_legend_handles_labels()
-    axes[-1].legend(
-        handles, labels, loc="lower left", fontsize=7.5, frameon=False,
+    fig.legend(
+        handles, labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.02),
+        ncol=4,
+        fontsize=7.5,
+        frameon=False,
         labelcolor=plt.rcParams.get("axes.labelcolor", "black"),
     )
 
@@ -125,7 +127,9 @@ def main() -> None:
         "Population-level conformer selection across BioSNAP test set (n=5493)\n"
         "Sorted weights within each sample, then aggregated by case type",
         fontsize=10.5,
+        y=0.97,
     )
+    fig.subplots_adjust(left=0.055, right=0.995, top=0.78, bottom=0.24, wspace=0.18)
 
     # save artifacts
     fig.savefig(FIG_DIR / "plan_A_conformer_distribution.png", dpi=180, bbox_inches="tight")

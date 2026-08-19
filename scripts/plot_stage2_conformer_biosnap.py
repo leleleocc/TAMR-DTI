@@ -10,10 +10,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
 
 from plot_theme import (
     GRID,
-    METRIC_COLORS,
     MUTED_TEXT,
     TEXT,
     apply_paper_theme,
@@ -36,6 +36,13 @@ METRICS = [
     ("acc_05", "Acc@0.5"),
     ("f1_05", "F1@0.5"),
 ]
+
+CONFORMER_METRIC_COLORS = {
+    "AUROC": "#2F6F9F",
+    "AUPRC": "#2D9C86",
+    "Acc@0.5": "#D99A35",
+    "F1@0.5": "#C66B5D",
+}
 
 RUNS = [
     {
@@ -199,9 +206,10 @@ def plot_grouped_bars(
     x = np.arange(len(rows))
     width = 0.18
     offsets = (np.arange(len(METRICS)) - (len(METRICS) - 1) / 2) * width
-    colors = [METRIC_COLORS[label] for _, label in METRICS]
+    colors = [CONFORMER_METRIC_COLORS[label] for _, label in METRICS]
 
     fig, ax = plt.subplots(figsize=(7.4, 3.55))
+    best_marker_handles = []
     for idx, ((_, metric_label), color) in enumerate(zip(METRICS, colors)):
         metric_values = values[:, idx]
         bars = ax.bar(
@@ -214,8 +222,32 @@ def plot_grouped_bars(
             linewidth=0.55,
         )
         best_index = int(np.argmax(metric_values))
-        bars[best_index].set_edgecolor(TEXT)
-        bars[best_index].set_linewidth(1.15)
+        if rows[best_index]["target_aware"]:
+            bar = bars[best_index]
+            ax.scatter(
+                bar.get_x() + bar.get_width() / 2,
+                metric_values[best_index] + 0.0018,
+                marker="*",
+                s=42,
+                color="#7A4A00",
+                edgecolor="white",
+                linewidth=0.4,
+                zorder=4,
+            )
+            if not best_marker_handles:
+                best_marker_handles.append(
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="*",
+                        linestyle="None",
+                        markerfacecolor="#7A4A00",
+                        markeredgecolor="white",
+                        markeredgewidth=0.4,
+                        markersize=8,
+                        label="Best TA",
+                    )
+                )
 
     ax.set_ylim(0.845, 0.94)
     ax.set_yticks(np.arange(0.85, 0.941, 0.01))
@@ -236,14 +268,17 @@ def plot_grouped_bars(
     ax.spines["left"].set_color("#94A3B8")
     ax.spines["bottom"].set_color("#94A3B8")
 
+    handles, labels = ax.get_legend_handles_labels()
     ax.legend(
+        handles + best_marker_handles,
+        labels + [handle.get_label() for handle in best_marker_handles],
         loc="upper center",
         bbox_to_anchor=(0.5, 1.16),
-        ncol=4,
+        ncol=5,
         frameon=False,
         fontsize=8.5,
         handlelength=1.4,
-        columnspacing=1.2,
+        columnspacing=1.0,
     )
     ax.text(
         0.5,
