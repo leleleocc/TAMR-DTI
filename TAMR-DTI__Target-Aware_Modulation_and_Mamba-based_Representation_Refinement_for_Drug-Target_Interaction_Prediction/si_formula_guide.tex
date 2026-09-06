@@ -1,0 +1,122 @@
+\section{Equation and Notation Guide}
+\label{si:equation_guide}
+
+This section provides an equation-by-equation reading guide for Section 3
+(Methodology) of the main manuscript. The equation identifiers in the first
+column are the labels used in the manuscript source. The table is deliberately
+redundant with the prose description so that every tensor, mask, gate, and
+aggregation operation can be checked without searching through the main text.
+
+\subsection{Global conventions and dimensions}
+
+Bold upper-case symbols denote matrices or token sequences, bold lower-case
+symbols denote vectors, and plain lower-case symbols denote scalars. A batch
+dimension is omitted unless it is needed for interpretation. The principal
+dimensions of the reported configuration are listed below.
+
+\begin{table}[!htbp]
+\centering
+\caption{Global dimensions and fixed configuration used by TAMR-DTI.}
+\label{tab:si_dimensions}
+\small
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.28\linewidth}>{\RaggedRight\arraybackslash}p{0.18\linewidth}>{\RaggedRight\arraybackslash}p{0.44\linewidth}}
+\toprule
+Symbol or setting & Value & Interpretation \\
+\midrule
+$d$ & 128 & Shared hidden dimension for drug and protein tokens. \\
+$N_g$ & 290 & Padded graph-token count. \\
+$N_c$ & 64 & Resampled atom-token count per conformer. \\
+$K$ & 8 & Number of conformer slots in the main model. \\
+$L_d$ & 354 & Drug-token length, $N_g+N_c$. \\
+$L_p$ & Variable & Protein-token length after padding and masking. \\
+$d_c$ & Backbone-dependent & ChemBERTa hidden size before pooling. \\
+$H$ & 8 & Number of heads in the BiIntention module. \\
+ProteinACmix layers & 3 & Ligand-conditioned protein encoder depth. \\
+BiIntention layers & 1 & Pairwise interaction depth in the main model. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mask $m_j\in\{0,1\}$ indicates whether protein position $j$ is a valid
+residue. The conformer-validity indicator $q_k\in\{0,1\}$ indicates whether
+conformer slot $k$ contains a generated geometry. Concatenation is written with
+square brackets; $\odot$ is element-wise multiplication; $[\,;\,]$ denotes
+feature concatenation; $\sigma$ is the sigmoid; $\operatorname{LN}$ denotes
+layer normalization; and $(\cdot)^\dagger$ denotes the Moore--Penrose
+pseudoinverse.
+
+\subsection{Section 3 equation map}
+
+\renewcommand{\arraystretch}{1.25}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{longtable}{>{\RaggedRight\arraybackslash}p{0.20\linewidth}>{\RaggedRight\arraybackslash}p{0.28\linewidth}>{\RaggedRight\arraybackslash}p{0.18\linewidth}>{\RaggedRight\arraybackslash}p{0.28\linewidth}}
+\caption{Equation-by-equation explanation for the Methodology section of the main manuscript.}\label{tab:si_equation_guide}\\
+\toprule
+Main-text label & Compact form & Main objects and dimensions & Role in the computation \\
+\midrule
+\endfirsthead
+\multicolumn{4}{c}{\tablename\ \thetable{} -- continued from previous page}\\
+\toprule
+Main-text label & Compact form & Main objects and dimensions & Role in the computation \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{Continued on next page}\\
+\endfoot
+\bottomrule
+\endlastfoot
+
+\texttt{dti\_prediction} & $s=f_\theta(D,T)$; $p=\sigma(s)$; $\hat y=\mathbf{1}[p\ge\tau]$ & $s,p,\tau,\hat y$ are scalars & Converts a drug--target pair into a logit, probability, and thresholded prediction. \\
+\texttt{overall\_pipeline} & $\mathbf D\to\mathbf x_D\to\mathbf P\to\mathbf P'\to\mathbf f\to s$ & $\mathbf D\in\R^{L_d\times d}$; $\mathbf P\in\R^{L_p\times d}$; $\mathbf f\in\R^{2d}$ & Gives the order of the complete forward pass and makes the two conditioning directions explicit. \\
+\texttt{chemberta\_encoding} & $\mathbf U^{\rm chem}=\operatorname{ChemBERTa}(s_D)$ & $\mathbf U^{\rm chem}\in\R^{L_s\times d_c}$ & Encodes the SMILES string with the frozen molecular language model. \\
+\texttt{chemberta\_pooling} & $\mathbf X_{\rm chem}=\operatorname{Pool}_{L_d,d}(\mathbf U^{\rm chem}_{\neg\rm special})$ & $\mathbf X_{\rm chem}\in\R^{L_d\times d}$ & Removes special tokens and maps variable-length language features to the fixed drug-token interface. \\
+\texttt{gcn\_projection} & $\mathbf h_i^{g,0}=\mathbf W_g\mathbf a_i$ & $\mathbf a_i\in\R^{75}$; $\mathbf h_i^{g,0}\in\R^d$ & Projects atom descriptors into the shared hidden space; the padding indicator is prevented from adding atom semantics. \\
+\texttt{gcn\_output} & $\mathbf H^g=\operatorname{GCN}(\mathcal G_D,\mathbf H^{g,0})$ & $\mathbf H^g\in\R^{N_g\times d}$ & Aggregates local bond and neighborhood information into graph tokens. \\
+\texttt{egnn\_conformer} & $(\mathbf Z_k,\mathbf R'_k)=\operatorname{EGNN}(\mathbf F_k,\mathbf R_k)$ & $\mathbf F_k\in\R^{N_c\times d}$; $\mathbf R_k\in\R^{N_c\times3}$ & Updates conformer atom features while respecting Euclidean coordinate transformations. \\
+\texttt{conformer\_global} & $\mathbf c_k=N_c^{-1}\sum_i\mathbf z_{k,i}$ & $\mathbf c_k\in\R^d$ & Produces one global summary per conformer for target-aware scoring; atom-level features are retained separately. \\
+\texttt{protein\_seed\_projection} & $\mathbf P^0=\mathbf W_p\operatorname{LN}(\mathbf P_{\rm ProtBERT})$ & $1024\to d$; $\mathbf P^0\in\R^{L_p\times d}$ & Places ProtBERT residue features in the same hidden space used by the drug branches. \\
+\texttt{protein\_context} & $\mathbf x_T=\frac{\sum_jm_j\mathbf p^0_j}{\max(1,\sum_jm_j)}$ & $\mathbf x_T\in\R^d$ & Computes the masked protein context that conditions conformer selection. \\
+\texttt{conformer\_score} & $a_k=\mathbf w_a^\top\SiLU(\mathbf W_a[\mathbf c_k;\mathbf x_T;\mathbf u_k]+\mathbf b_a)+b_s$ & $a_k\in\R$; $\mathbf u_k=\mathbf W_e\epsilon_k$ & Scores each candidate geometry using its content, target context, and normalized energy. \\
+\texttt{conformer\_weight} & $\alpha_k=\frac{e^{a_k}q_k}{\sum_\ell e^{a_\ell}q_\ell}$ & $\boldsymbol\alpha\in\R^K$ & Normalizes scores over valid conformers; invalid slots receive no probability mass. \\
+\texttt{target\_aware\_3d} & $\mathbf Z^{3D}=\sum_k\alpha_k\mathbf Z_k$; $\mathbf c^{3D}=\sum_k\alpha_k\mathbf c_k$ & $\mathbf Z^{3D}\in\R^{N_c\times d}$; $\mathbf c^{3D}\in\R^d$ & Forms the protein-conditioned atom-level and global 3D representations. \\
+\texttt{geo\_concat} & $\mathbf X_{\rm str}=[\mathbf H^g;\mathbf Z^{3D}]$ & $\mathbf X_{\rm str}\in\R^{(N_g+N_c)\times d}$ & Concatenates topology and target-aware geometry to match the ChemBERTa token length. \\
+\texttt{drug\_gate} & $\mathbf D=\mathbf G^D\odot\widetilde{\mathbf X}_{\rm chem}+(1-\mathbf G^D)\odot\widetilde{\mathbf X}_{\rm str}$ & $\mathbf G^D\in(0,1)^{L_d\times d}$ & Learns a slot- and channel-wise balance between semantic and structural drug streams. \\
+\texttt{drug\_context} & $\mathbf x_D=L_d^{-1}\sum_i\mathbf d_i$ & $\mathbf x_D\in\R^d$ & Summarizes the fused drug tokens and sends ligand context to the protein encoder. \\
+\texttt{protein\_ffn\_half\_1} & $\mathbf U^\ell=\tfrac12\operatorname{FFN}_1^\ell(\mathbf P^{\ell-1})+\tfrac12\mathbf P^{\ell-1}$ & $\mathbf U^\ell\in\R^{L_p\times d}$ & Applies a conservative first feed-forward residual update in ProteinACmix layer $\ell$. \\
+\texttt{film\_params} & $[\boldsymbol\gamma^\ell,\boldsymbol\beta^\ell]=\operatorname{MLP}_{\rm film}^\ell(\mathbf x_D)$ & $\boldsymbol\gamma^\ell,\boldsymbol\beta^\ell\in\R^d$ & Generates ligand-dependent feature-wise scale and shift parameters; $\rho=0.05$ limits their initial effect. \\
+\texttt{ligand\_film} & $\widetilde{\mathbf U}^\ell=\mathbf U^\ell\odot(1+\bar{\boldsymbol\gamma}^\ell)+\bar{\boldsymbol\beta}^\ell$ & Broadcast over $L_p$ residue tokens & Modulates protein features with the fused ligand context. \\
+\texttt{protein\_acmix} & $\mathbf A^\ell=\operatorname{MHSA}_{rel}(\widetilde{\mathbf U}^\ell)+\widetilde{\mathbf U}^\ell$; $\mathbf C^\ell=\operatorname{Conv}(\mathbf A^\ell)+\mathbf A^\ell$ & All tensors are $L_p\times d$ & Combines long-range relative attention, local convolution, and a second half-step FFN. \\
+\texttt{protein\_output} & $\mathbf P=\mathbf P^3$ & $\mathbf P\in\R^{L_p\times d}$ & Defines the ligand-conditioned protein sequence passed to refinement. \\
+\texttt{feature\_projection} & $\psi_{\rm chem}:\R^{128}\to\R^{128}$; $\psi_g:\R^{75}\to\R^{128}$; $\psi_p:\R^{1024}\to\R^{128}$ & Three active input mappings & Records the shared-dimension contract between cached features and trainable encoders. \\
+\texttt{feature\_contexts} & $\mathbf x_T=\operatorname{MaskedMean}(\mathbf P^0,\mathbf m)$; $\mathbf x_D=\operatorname{MeanPool}(\mathbf D)$ & Two vectors in $\R^d$ & Documents the order of the two feedback paths: target-to-drug first, then drug-to-protein. \\
+\texttt{protein\_masked\_input} & $\mathbf p^{mask}_j=m_j\mathbf p_j$ & $\mathbf P^{mask}\in\R^{L_p\times d}$ & Suppresses padded residue positions before protein-side Mamba processing. \\
+\texttt{bidirectional\_mamba} & $\mathbf M=\mathbf W_m[\mathbf M_f;\mathbf M_b]$ & $\mathbf M_f$ and $\mathbf M_b$ are forward/backward Mamba streams & Captures ordered protein dependencies in both sequence directions; the backward stream is computed on the reversed sequence. \\
+\texttt{mamba\_residual} & $\mathbf R=\mathbf P^{mask}+\operatorname{Dropout}(\mathbf M)$; $\bar{\mathbf P}_{\rm Mamba}=\mathbf R+\operatorname{FFN}_m(\mathbf R)$ & $L_p\times d$ & Adds residual and feed-forward refinement, then reapplies the residue mask. \\
+\texttt{mamba\_gate} & $g=\sigma(\eta)$; $\mathbf P'=\mathbf P+g(\mathbf P_{\rm Mamba}-\mathbf P)$ & $g\in(0,1)$; $\mathbf P'\in\R^{L_p\times d}$ & Controls the strength of Mamba injection; $\eta=-2$ initializes $g\approx0.119$. \\
+\texttt{bi\_self\_attention} & $\mathbf D^s=\operatorname{SA}_D(\mathbf D)$; $\mathbf P^s=\operatorname{SA}_P(\mathbf P')$ & Drug and protein streams retain their lengths & Refines each modality independently before cross-modal intention updates. \\
+\texttt{intention\_head} & $\mathbf Q_r=\mathbf Q\mathbf W_r^Q$; $\mathbf K_r=\mathbf X\mathbf W_r^K$; $\mathbf V_r=\mathbf X\mathbf W_r^V$ & $d_h=d/H$ per head & Builds a feature-space interaction map using a ridge-stabilized pseudoinverse and head weighting. \\
+\texttt{intention\_block} & $\Phi(\mathbf X,\mathbf Q)=\beta\mathbf Q^\top\softmax(\operatorname{Int}(\operatorname{LN}(\mathbf X),\mathbf Q))$ & $\Phi\in\R^{d\times d}$ & Converts cross-modal intention features into a compact pair representation. \\
+\shortstack[l]{\texttt{bidirectional\_intention\_}\\\texttt{update}} & $\mathbf V_p^\ell=\Phi(\mathbf D^{\ell-1},\mathbf P^{\ell-1})$; $\mathbf V_d^\ell=\Phi(\mathbf P^{\ell-1},\mathbf D^{\ell-1})$ & Drug and protein directions are computed separately & Keeps the interaction update bidirectional rather than concatenating unimodal features. \\
+\texttt{fusion\_pooling} & $\mathbf f=[\operatorname{MaxPool}(\mathbf D^{(L)});\operatorname{MaxPool}(\mathbf P^{(L)})]$ & $\mathbf f\in\R^{2d}=\R^{256}$ & Produces the fixed-size pair vector consumed by the prediction head. \\
+\texttt{prediction\_mlp} & $\mathbf f\to\mathbf z_1\to\mathbf z_2\to\mathbf z_3\to s$ & $256\to256\to256\to128\to1$ & Maps the pair vector to one interaction logit using ReLU and layer normalization. \\
+\texttt{weighted\_bce} & $\mathcal L=-B^{-1}\sum_i[w_+y_i\log p_i+(1-y_i)\log(1-p_i)]$ & $B$ samples; $w_+>0$ & Optimizes the logit-derived probability while compensating for positive/negative imbalance. \\
+\texttt{pos\_weight} & $w_+=N_-/N_+$ & Training-split counts only & Computes the dataset-specific positive-class weight without using validation or test labels. \\
+\end{longtable}
+
+\subsection{Interpretation of the conditioning order}
+
+The key implementation contract is the order of operations. ProtBERT features
+are projected and masked to form $\mathbf x_T$, which scores and aggregates
+the candidate conformers. The resulting fused drug sequence is pooled to form
+$\mathbf x_D$, which then modulates the protein sequence through FiLM. Mamba is
+applied only to the ordered protein stream, after ligand conditioning and before
+BiIntention. This order should be preserved when reproducing the model; moving
+the two context vectors or applying the Mamba block to the drug slots changes
+the stated architecture.
+
+The conformer energy $\epsilon_k$ is an auxiliary ranking feature. It is not
+treated as a calibrated thermodynamic free energy and is not compared across
+molecules as an absolute physical quantity. Invalid conformers are masked in
+the softmax, and the implementation activates the first slot as a fallback if
+all conformer-validity indicators are zero.

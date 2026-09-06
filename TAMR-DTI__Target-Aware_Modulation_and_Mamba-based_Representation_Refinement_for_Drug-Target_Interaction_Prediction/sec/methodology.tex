@@ -44,20 +44,44 @@ binary mask $\mathbf{m}\in\{0,1\}^{L_p}$ used to identify valid residues.
 \subsection{Drug Data Preprocessing}
 \label{sec:drug_data_preprocessing}
 
-Figure~\ref{fig:drug_preprocess} summarizes how each SMILES string is converted
-into the three drug views used by TAMR-DTI. For the 1D semantic view, the SMILES
-string is tokenized and encoded by a frozen ChemBERTa-77M-MTR model; after
-removing special tokens, the hidden states are adaptively pooled to a fixed
-matrix $\mathbf{d}_{1D}\in\mathbb{R}^{354\times128}$. For the 2D topological
-view, RDKit parses atoms and bonds from the same SMILES string, and canonical
-atom and bond featurizers construct a molecular graph with node features, edge
-features, and adjacency information. For the 3D geometric view, hydrogens are
-added before RDKit ETKDGv3 generates $K$ candidate conformers. When UFF
-parameters are available, each conformer is optimized and assigned an energy;
-the conformers are then sorted by energy and converted into fixed-size atom
-features $\mathbf{F}_k$, coordinates $\mathbf{R}_k$, a normalized energy
-$\epsilon_k$, and a validity indicator $q_k$. These processed 1D, 2D, and 3D
-representations form the direct drug-side inputs to the encoder.
+The preprocessing stage converts each SMILES string into three complementary drug views before neural
+encoding. The overview diagram summarizes this conversion in Figure~\ref{fig:drug_preprocess}. The 1D
+view captures molecular-language semantics: it is processed by ChemBERTa tokenization, frozen language-
+model encoding, and adaptive pooling so that pretrained chemical priors can enter the shared drug-token
+interface. The 2D view captures atom-bond topology: it is processed with RDKit/DGLLife graph construction,
+canonical atom and bond features, self-loops, and virtual-node padding so that local chemical connectivity is
+preserved. The 3D view captures plausible ligand geometry: it is processed through hydrogen addition, ETKDG
+conformer generation, optional UFF optimization, energy ranking, fixed-size atom-token pooling, and validity
+masking so that the downstream model can choose among multiple target-dependent conformations rather than
+relying on a single fixed geometry.
+
+\paragraph{1D semantic preprocessing.}
+The 1D module treats the SMILES string as a molecular language sequence. The string is tokenized and encoded
+by a frozen ChemBERTa-77M-MTR model \citep{chithrananda2020chemberta}. Special tokens are removed, and the
+remaining token hidden states are adaptively pooled to the shared drug-token length and hidden dimension,
+giving $\mathbf{X}_{\mathrm{chem}}\in\mathbb{R}^{354\times128}$. This branch provides pretrained chemical
+semantics and remains independent of atom-index ordering in the graph and conformer branches.
+
+\paragraph{2D topology preprocessing.}
+The 2D module reconstructs the molecular graph from the same SMILES string using RDKit and DGLLife. Canonical
+atom and bond featurizers build a DGL molecular bigraph with self-loops, atom descriptors, bond descriptors,
+and adjacency structure. Atom features are augmented with a virtual-node indicator and padded with virtual
+nodes to $N_g=290$ graph nodes, producing the graph input $\mathcal{G}_D$. This branch preserves local
+chemical connectivity and bond-induced neighborhood structure that are not explicit in the pooled ChemBERTa
+token matrix.
+
+\paragraph{3D conformer preprocessing.}
+The 3D module generates candidate ligand geometries. Hydrogens are first added, then RDKit ETKDGv3 embeds up
+to $K$ conformers. When UFF parameters are available, each conformer is optimized and assigned a computed
+UFF energy. The candidate conformers are sorted by this energy, adaptively pooled to $N_c=64$ atom tokens,
+and stored as atom features $\mathbf{F}_k$, Cartesian coordinates $\mathbf{R}_k$, normalized energy
+$\epsilon_k$, and validity indicator $q_k$. Invalid or missing conformer slots are zero-padded and masked.
+This module therefore exposes multiple plausible geometries to the later target-aware conformer selector,
+rather than committing to a single fixed conformation during preprocessing.
+
+Together, the three modules produce the cached drug-side inputs
+$\mathbf{X}_{\mathrm{chem}}$, $\mathcal{G}_D$, and
+$\{\mathbf{F}_k,\mathbf{R}_k,\epsilon_k,q_k\}_{k=1}^{K}$ used by the drug encoder.
 
 \begin{figure}[!htbp]
 \centering
@@ -70,59 +94,38 @@ and conformer-validity indicators.}
 \end{figure}
 \FloatBarrier
 
-\subsection{Model Overview}
+\subsection{Proposed Representation Framework}
 \label{sec:overall_framework}
 
-TAMR-DTI is built on a BiIntention-based DTI backbone
-\citep{peng2024bindti,ji2026ldmdti}. Pretrained molecular and protein features
-provide semantic priors, graph convolution captures molecular topology,
-equivariant geometry models conformer structure, and BiIntention performs
-cross-modal matching. TAMR-DTI adds two pair-specific refinements. Protein
-context reweights drug conformers, making geometric aggregation target
-conditioned. A gated Mamba residual block is then applied only to the ordered
-protein token stream before BiIntention \citep{gu2022s4,gu2023mamba}.
+The proposed TAMR-DTI representation framework is built on a BiIntention-based DTI backbone
+\citep{peng2024bindti,ji2026ldmdti}. It is organized into six modules that are detailed in the following
+module descriptions. The drug representation module constructs a fused ligand token sequence from
+ChemBERTa semantics, graph topology, and target-aware conformer geometry. The protein representation module
+maps ProtBERT residue features into ligand-conditioned protein tokens through FiLM-modulated ACmix blocks.
+The aligned representation interface standardizes hidden dimensions, token lengths, context vectors, and
+masks before cross-modal comparison. The protein representation refinement and interaction module applies
+gated bidirectional Mamba only to the ordered protein token stream and then uses BiIntention for explicit
+drug-target matching \citep{gu2022s4,gu2023mamba}. The prediction module converts the resulting interaction
+representation into a binding logit, and the training objective optimizes this logit with weighted binary
+cross-entropy.
 
-The architecture, illustrated in Figure~\ref{fig:tamr_dti_architecture} and
-formalised in Eq.~\ref{eq:overall_pipeline}, is organised into four functional
-groups. The drug encoder combines three molecular views --- ChemBERTa
-semantics $\mathbf{d}_{1D}$, a GCN over the 2D graph $\mathcal{G}_D$, and
-EGNN-encoded conformer tokens --- and merges them via per-conformer
-target-aware weights $\alpha_k$ and a token-wise gate into the fused drug
-tokens $\mathbf{D}$, whose mean pool $\mathbf{d}_g$ serves as the ligand
-context. The protein encoder projects ProtBERT residue features into seed
-tokens $\mathbf{P}^{0}$ and applies three ACmix--FeedForward blocks under
-ligand-conditioned FiLM modulation
-$(\gamma,\beta)\!=\!\operatorname{MLP}(\mathbf{d}_g)$, producing the protein
-tokens $\mathbf{P}$. A bidirectional Mamba block refines $\mathbf{P}$ through
-a learned scalar gate $g\!\in\!(0,1)$, giving the refined tokens
-$\mathbf{P}'\!=\!(1{-}g)\mathbf{P}+g\,\mathrm{SSM}(\mathbf{P})$. The matching
-head couples $\mathbf{D}$ and
-$\mathbf{P}'$ through BiIntention bidirectional cross-attention, max-pools and
-concatenates the result into the joint representation $\mathbf{f}$, and a
-four-layer MLP decodes $\mathbf{f}$ into the binding probability
-$p\!=\!\sigma(\mathrm{MLP}(\mathbf{f}))$ with prediction
-$\hat{y}\!=\!\mathbf{1}[p\!\ge\!\tau]$ at a validation-selected threshold
-$\tau$.
+The schematic overview in Figure~\ref{fig:tamr_dti_architecture} and the formal flow in
+Eq.~\ref{eq:overall_pipeline} summarize the end-to-end representation path. The drug representation module
+receives the ChemBERTa semantic tokens, the molecular graph, the conformer cache, and the initial protein
+seed representation. It extracts topology and target-conditioned geometry, then fuses the drug-side streams
+into the token sequence $\mathbf{D}$. The fused drug tokens are pooled into the ligand context $\mathbf{x}_D$,
+which conditions the protein representation module. A gated bidirectional Mamba residual block refines the
+ligand-conditioned protein tokens, BiIntention forms the compact interaction representation, and the
+prediction module maps this representation to the interaction probability.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/tamr_dti_architecture.pdf}
-\caption{TAMR-DTI architecture. Abbreviations:
-$\mathbf{d}_{1D}$ ChemBERTa 1D semantics;
-$\mathbf{d}_{\text{geo}}$ target-aware geometry tokens;
-$\mathbf{D}$ fused drug tokens;
-$\mathbf{d}_g$ ligand context;
-$\mathbf{P}^{0}$ ProtBERT seed tokens;
-$\mathbf{P}_g$ protein seed context;
-$\mathbf{P}$ protein tokens after ACmix--FiLM;
-$\mathbf{P}'$ Mamba-refined protein tokens;
-$\mathbf{f}$ joint pair representation;
-$\alpha_k$ per-conformer weight;
-$(\gamma,\beta)$ FiLM affine parameters;
-$g$ scalar Mamba gate;
-$\tau$ validation-selected decision threshold.
-Glyphs: $\boldsymbol{\times}$ multiplication, $\odot$ element-wise product,
-$\sigma$ sigmoid, ``$\times 3$'' a block stacked three times.}
+\caption{TAMR-DTI representation framework. The figure is a schematic view of the drug representation
+streams, ligand-conditioned protein representation module, protein representation refinement block, and
+BiIntention interaction representation head. Formal tensor notation is defined in Eq.~\ref{eq:overall_pipeline}
+and the surrounding text. Glyphs: $\boldsymbol{\times}$ multiplication, $\odot$ element-wise product,
+$\sigma$ sigmoid, and ``$\times 3$'' a block stacked three times.}
 \label{fig:tamr_dti_architecture}
 \end{figure}
 
@@ -131,14 +134,14 @@ The computation is
 \begin{aligned}
   \mathbf{D} &=
   \operatorname{DrugEnc}\!\left(
-    \mathbf{d}_{1D},\mathcal{G}_D,
+    \mathbf{X}_{\mathrm{chem}},\mathcal{G}_D,
     \{\mathbf{F}_k,\mathbf{R}_k,\epsilon_k,q_k\}_{k=1}^{K},
     \mathbf{P}^{0},\mathbf{m}
   \right), \\
-  \mathbf{d}_g &=
+  \mathbf{x}_D &=
   \operatorname{MeanPool}(\mathbf{D}),\\
   \mathbf{P} &= \operatorname{ProtEnc}\!\left(
-    \mathbf{P}^{0},\mathbf{m},\mathbf{d}_g
+    \mathbf{P}^{0},\mathbf{m},\mathbf{x}_D
   \right),\\
   \mathbf{P}' &=
   \operatorname{ProtMamba}(\mathbf{P},\mathbf{m}),\\
@@ -148,7 +151,7 @@ The computation is
 \end{aligned}
 \label{eq:overall_pipeline}
 \end{equation}
-Here $\mathbf{d}_{1D}\in\mathbb{R}^{L_d\times d}$ denotes the ChemBERTa drug
+Here $\mathbf{X}_{\mathrm{chem}}\in\mathbb{R}^{L_d\times d}$ denotes the ChemBERTa drug
 feature sequence, $\mathcal{G}_D$ is the molecular graph,
 $(\mathbf{F}_k,\mathbf{R}_k)$ are the atom features and coordinates of conformer
 $k$, $\epsilon_k$ is its conformer energy, and $q_k\in\{0,1\}$ marks whether the
@@ -156,23 +159,47 @@ conformer is valid. $\mathbf{P}^{0}$ is the projected ProtBERT protein feature,
 $\mathbf{D}\in\mathbb{R}^{L_d\times d}$ is the fused drug token sequence,
 $\mathbf{P}\in\mathbb{R}^{L_p\times d}$ is the ligand-conditioned protein token
 sequence before protein-side Mamba refinement, $\mathbf{P}'$ is the
-refined protein token sequence, $\mathbf{d}_g$ is the global ligand context used
+refined protein token sequence, $\mathbf{x}_D$ is the global ligand context used
 for ligand-conditioned protein encoding, and $\mathbf{f}\in\mathbb{R}^{2d}$ is
 the fused pair representation. The projected protein sequence first guides
 conformer aggregation, and the resulting drug representation then provides
 ligand context for protein encoding before final cross-modal matching.
 
-\subsection{Drug Encoder}
+\subsubsection{Drug Representation Module}
 \label{sec:drug_representation_module}
 
-The drug encoder integrates molecular language, graph topology, and
-target-aware 3D geometry. SMILES features encode chemical semantics learned
+The drug representation module integrates molecular language, graph topology,
+and target-aware 3D geometry. SMILES features encode chemical semantics learned
 from molecular corpora, graph features preserve atom-neighbor connectivity, and
-conformer features encode spatial arrangement. TAMR-DTI computes topology and
-geometry tokens, then fuses them with the ChemBERTa token sequence through a
-learnable gate.
+conformer features encode spatial arrangement. TAMR-DTI first represents the
+one-dimensional SMILES stream with a frozen molecular language model, computes
+topology and geometry tokens from RDKit-derived structures, and then fuses the
+three drug views through a learnable gate.
 
-\paragraph{Molecular topology.}
+\paragraph{1D semantic representation.}
+The 1D branch starts from the SMILES string $s_D$ and treats it as a molecular
+language sequence. During preprocessing, $s_D$ is tokenized with the ChemBERTa
+tokenizer and encoded by the frozen ChemBERTa-77M-MTR backbone:
+\begin{equation}
+  \mathbf{U}^{\mathrm{chem}}=\operatorname{ChemBERTa}(s_D)
+  \in\mathbb{R}^{L_s\times d_c}.
+  \label{eq:chemberta_encoding}
+\end{equation}
+Here $L_s$ and $d_c$ denote the ChemBERTa sequence length and hidden size
+before fixed-size pooling. Special tokens are removed, and the remaining token
+hidden states are pooled to the shared drug-token length and hidden dimension:
+\begin{equation}
+  \mathbf{X}_{\mathrm{chem}}=\operatorname{Pool}_{L_d,d}
+  \left(\mathbf{U}^{\mathrm{chem}}_{\neg\mathrm{special}}\right)
+  \in\mathbb{R}^{L_d\times d}.
+  \label{eq:chemberta_pooling}
+\end{equation}
+The resulting sequence provides pretrained SMILES semantics. Its positions are
+fixed molecular-language slots after pooling, not atom indices, which is why the
+later fusion gate is interpreted as a latent-slot fusion rather than a direct
+SMILES-token-to-atom alignment.
+
+\paragraph{2D topology representation.}
 Let $\mathcal{G}_D=(\mathcal{V},\mathcal{E})$ be the padded molecular graph of
 drug $D$, where each atom node has an input feature
 $\mathbf{a}_i\in\mathbb{R}^{75}$. The implementation first projects atom
@@ -195,7 +222,7 @@ network then aggregates local chemical topology:
 \end{equation}
 The resulting $\mathbf{H}^{g}$ provides atom-level topology tokens.
 
-\paragraph{Conformer geometry.}
+\paragraph{3D conformer representation.}
 For conformer $k$, let
 $\mathbf{F}_k\in\mathbb{R}^{N_c\times d}$ denote atom features and
 $\mathbf{R}_k\in\mathbb{R}^{N_c\times 3}$ denote Cartesian coordinates. TAMR-DTI
@@ -208,7 +235,8 @@ uses an EGNN layer to update atom features while respecting Euclidean symmetry:
   \mathbf{Z}_k\in\mathbb{R}^{N_c\times d}.
   \label{eq:egnn_conformer}
 \end{equation}
-The conformer-level summary is obtained by average pooling over atom tokens:
+The conformer-level summary is obtained by average pooling over the fixed
+resampled atom tokens:
 \begin{equation}
   \mathbf{c}_k =
   \frac{1}{N_c}\sum_{i=1}^{N_c}\mathbf{z}_{k,i}.
@@ -230,23 +258,23 @@ this order: the $n=1$ setting tests a fixed lowest-computed-energy
 geometry, whereas larger $n$ values expose progressively broader geometric
 alternatives to the target-aware selector.
 
-\paragraph{Target-aware conformers.}
+\paragraph{Target-aware conformer representation.}
 Conformer aggregation depends on the paired protein. The same ligand can expose
 different binding-relevant geometric cues for different targets, so a fixed
 conformer average may dilute target-specific 3D signal. ProtBERT tokens are
 first normalized and projected:
 \begin{equation}
   \mathbf{P}^{0} =
-  \mathbf{W}_p\,\operatorname{LayerNorm}(\mathbf{P}^{bert}),
+\mathbf{W}_p\,\operatorname{LayerNorm}(\mathbf{P}_{\mathrm{ProtBERT}}),
   \qquad
-  \mathbf{P}^{bert}\in\mathbb{R}^{L_p\times 1024},
+  \mathbf{P}_{\mathrm{ProtBERT}}\in\mathbb{R}^{L_p\times 1024},
   \quad
   \mathbf{P}^{0}\in\mathbb{R}^{L_p\times d}.
   \label{eq:protein_seed_projection}
 \end{equation}
 The masked protein context vector is then
 \begin{equation}
-  \mathbf{p}_g =
+  \mathbf{x}_T =
   \frac{\sum_{j=1}^{L_p}m_j\mathbf{p}^{0}_j}
        {\max(1,\sum_{j=1}^{L_p}m_j)}.
   \label{eq:protein_context}
@@ -260,7 +288,7 @@ conformer summary, the protein context, and the energy embedding:
   \operatorname{SiLU}
   \left(
     \mathbf{W}_{a}
-    [\mathbf{c}_k;\mathbf{p}_g;\mathbf{u}_k]
+    [\mathbf{c}_k;\mathbf{x}_T;\mathbf{u}_k]
     +\mathbf{b}_{a}
   \right)
   + b_s.
@@ -293,37 +321,36 @@ The target-aware atom-level 3D representation and its global context are
 Thus, conformer weights are conditioned on the paired protein rather than fixed
 for the ligand alone.
 
-\paragraph{Drug fusion.}
+\paragraph{Drug representation fusion.}
 The graph topology tokens and target-aware 3D tokens are concatenated:
 \begin{equation}
-  \mathbf{d}_{\text{geo}} =
+  \mathbf{X}_{\mathrm{str}} =
   [\mathbf{H}^{g};\mathbf{Z}^{3D}]
   \in\mathbb{R}^{(N_g+N_c)\times d}.
   \label{eq:geo_concat}
 \end{equation}
-This sequence has the same length as the cached ChemBERTa feature sequence
-$\mathbf{d}_{1D}\in\mathbb{R}^{L_d\times d}$. In preprocessing, the
-ChemBERTa hidden states are mapped to the same fixed drug-token length
-$L_d=354$ used by the structural branch. Therefore, the fusion gate should be
-understood as a fixed latent-slot operation over two equal-length drug
-representations after preprocessing. The slot index does not imply a one-to-one
-chemical alignment between a SMILES token and a graph atom. Both branches are
-normalized and combined by a slot-wise, channel-wise gate:
+By construction, this structural sequence has length
+$N_g+N_c=L_d$ and matches the 1D ChemBERTa feature sequence
+$\mathbf{X}_{\mathrm{chem}}\in\mathbb{R}^{L_d\times d}$. Therefore, the fusion
+gate should be understood as a fixed latent-slot operation over two equal-length
+drug representations after preprocessing. The slot index does not imply a
+one-to-one chemical alignment between a SMILES token and a graph atom. Both
+branches are normalized and combined by a slot-wise, channel-wise gate:
 \begin{equation}
 \begin{aligned}
-  \tilde{\mathbf{d}}_{1D}
-  &= \operatorname{LayerNorm}(\mathbf{d}_{1D}),\\
-  \tilde{\mathbf{d}}_{\text{geo}}
-  &= \operatorname{LayerNorm}(\mathbf{d}_{\text{geo}}),\\
+  \tilde{\mathbf{X}}_{\mathrm{chem}}
+  &= \operatorname{LayerNorm}(\mathbf{X}_{\mathrm{chem}}),\\
+  \tilde{\mathbf{X}}_{\mathrm{str}}
+  &= \operatorname{LayerNorm}(\mathbf{X}_{\mathrm{str}}),\\
   \mathbf{G}^{D}
   &= \sigma\!\left(
       \mathbf{W}_{f}
-      [\tilde{\mathbf{d}}_{1D};\tilde{\mathbf{d}}_{\text{geo}}]
+      [\tilde{\mathbf{X}}_{\mathrm{chem}};\tilde{\mathbf{X}}_{\mathrm{str}}]
       +\mathbf{b}_{f}
     \right),\\
   \mathbf{D}
-  &= \mathbf{G}^{D}\odot\tilde{\mathbf{d}}_{1D}
-   + (1-\mathbf{G}^{D})\odot\tilde{\mathbf{d}}_{\text{geo}}.
+  &= \mathbf{G}^{D}\odot\tilde{\mathbf{X}}_{\mathrm{chem}}
+   + (1-\mathbf{G}^{D})\odot\tilde{\mathbf{X}}_{\mathrm{str}}.
 \end{aligned}
 \label{eq:drug_gate}
 \end{equation}
@@ -334,21 +361,23 @@ training, the gate learns the token-wise balance between pretrained molecular
 semantics and structural information. The global ligand context used by the
 protein module is
 \begin{equation}
-  \mathbf{d}_g = \frac{1}{L_d}\sum_{i=1}^{L_d}\mathbf{d}_i.
+  \mathbf{x}_D = \frac{1}{L_d}\sum_{i=1}^{L_d}\mathbf{d}_i.
   \label{eq:drug_context}
 \end{equation}
 
-\subsection{Protein Encoder}
+\subsubsection{Protein Representation Module}
 \label{sec:protein_representation_module}
 
-The protein encoder maps ProtBERT residue features into ligand-conditioned
+The protein representation module maps ProtBERT residue features into ligand-conditioned
 protein tokens. ProtBERT provides residue-level sequence priors, and the
 Feature-wise Linear Modulation (FiLM) path \citep{perez2018film} lets the paired
 ligand modulate these tokens before cross-modal fusion.
 
 The input protein sequence is first mapped from the ProtBERT dimension to the
-shared hidden dimension using Eq.~\ref{eq:protein_seed_projection}. The projected
-tokens $\mathbf{P}^{0}$ are passed through three ProteinACmix layers. Each layer
+shared hidden dimension using Eq.~\ref{eq:protein_seed_projection}. This is the
+same protein seed sequence used by the drug representation module for target-aware
+conformer selection. The projected tokens $\mathbf{P}^{0}$ are then passed through
+three ProteinACmix layers. Each layer
 combines a feed-forward half-step, ligand-conditioned feature modulation,
 relative self-attention, dynamic convolution, and a second feed-forward
 half-step. For layer $\ell=1,\ldots,3$, let
@@ -362,13 +391,13 @@ feed-forward residual update is
   \frac{1}{2}\mathbf{P}^{\ell-1}.
   \label{eq:protein_ffn_half_1}
 \end{equation}
-If ligand conditioning is enabled, the global drug context $\mathbf{d}_g$ is
+If ligand conditioning is enabled, the global drug context $\mathbf{x}_D$ is
 converted into feature-wise scale and shift parameters
 $\boldsymbol{\gamma}^{\ell},\boldsymbol{\beta}^{\ell}\in\mathbb{R}^{d}$:
 \begin{equation}
 \begin{aligned}
   \bigl[\boldsymbol{\gamma}^{\ell},\boldsymbol{\beta}^{\ell}\bigr]
-  &= \operatorname{MLP}^{\ell}_{film}(\mathbf{d}_g),\\
+  &= \operatorname{MLP}^{\ell}_{film}(\mathbf{x}_D),\\
   \bar{\boldsymbol{\gamma}}^{\ell}
   &= \rho\tanh(\boldsymbol{\gamma}^{\ell}),\\
   \bar{\boldsymbol{\beta}}^{\ell}
@@ -387,7 +416,9 @@ The protein tokens are then modulated as
   \label{eq:ligand_film}
 \end{equation}
 where the scale and shift vectors are broadcast over the residue-token axis.
-The fixed scale $\rho$ keeps ligand modulation small at initialization.
+When ligand conditioning is disabled, the implementation uses
+$\tilde{\mathbf{U}}^{\ell}=\mathbf{U}^{\ell}$. The fixed scale $\rho$ keeps
+ligand modulation small at initialization.
 
 The modulated tokens are further processed by the CNN-Transformer block:
 \begin{equation}
@@ -419,25 +450,26 @@ protein module outputs
   \label{eq:protein_output}
 \end{equation}
 
-\subsection{Feature Alignment and Masking}
+\subsubsection{Aligned Representation Interface}
 \label{sec:feature_encoder_module}
 
-The preceding encoder modules operate on heterogeneous inputs: cached
+The preceding representation modules operate on heterogeneous inputs: cached
 ChemBERTa tokens, RDKit atom descriptors, EGNN conformer tokens, and ProtBERT
-residue embeddings. Before the fusion module can compare drug and protein
+residue embeddings. Before the interaction module can compare drug and protein
 tokens, TAMR-DTI converts these streams into a shared tensor interface with a
 common hidden dimension, fixed drug-token length, and explicit validity masks.
 This interface is an implementation contract between the modality-specific
-encoders and the interaction module.
+representation modules and the interaction module.
 
-First, the active streams are aligned to the shared dimension $d=128$:
+The active-stream projections used by the encoders are summarized as mappings to
+the shared dimension $d=128$:
 \begin{equation}
-  \psi_{1D}:\mathbb{R}^{128}\rightarrow\mathbb{R}^{128},\qquad
+  \psi_{\mathrm{chem}}:\mathbb{R}^{128}\rightarrow\mathbb{R}^{128},\qquad
   \psi_{g}:\mathbb{R}^{75}\rightarrow\mathbb{R}^{128},\qquad
   \psi_{p}:\mathbb{R}^{1024}\rightarrow\mathbb{R}^{128}.
   \label{eq:feature_projection}
 \end{equation}
-Here $\psi_{1D}$ is the layer normalization applied to the cached ChemBERTa
+Here $\psi_{\mathrm{chem}}$ is the layer normalization applied to the cached ChemBERTa
 sequence, $\psi_g$ is the graph input projection in
 Eq.~\ref{eq:gcn_projection}, and $\psi_p$ is the LayerNorm-linear projection of
 ProtBERT features in Eq.~\ref{eq:protein_seed_projection}. The conformer atom
@@ -451,12 +483,13 @@ atoms.
 Second, TAMR-DTI constructs pair-level contexts in a fixed order. The projected
 protein seed tokens are pooled with the residue mask to form the target context
 used for conformer selection. After the target-aware drug tokens are fused, their
-unmasked mean becomes the ligand context used by FiLM in the protein encoder:
+unmasked mean becomes the ligand context used by FiLM in the protein
+representation module:
 \begin{equation}
-  \mathbf{p}_g =
+  \mathbf{x}_T =
   \operatorname{MaskedMean}(\mathbf{P}^{0},\mathbf{m}),
   \qquad
-  \mathbf{d}_g =
+  \mathbf{x}_D =
   \operatorname{MeanPool}(\mathbf{D}).
   \label{eq:feature_contexts}
 \end{equation}
@@ -469,24 +502,25 @@ mask-aware in the implementation. The conformer validity mask
 $\mathbf{q}=(q_1,\ldots,q_K)$ prevents invalid conformers from receiving
 probability mass in Eq.~\ref{eq:conformer_weight}. The protein mask
 $\mathbf{m}$ is used in masked mean pooling, relative self-attention inside the
-protein encoder, and protein-side Mamba refinement. The final BiIntention module
+protein representation module, and protein-side Mamba refinement. The final BiIntention module
 then receives the fixed-length protein token sequence produced by these masked
 upstream operations. Thus, the aligned interface entering the fusion stage is
 $\{\mathbf{D},\mathbf{P},\mathbf{m}\}$, while
 $\boldsymbol{\alpha}$ is retained as an auxiliary record of the target-aware
 conformer weights for analysis.
 
-\subsection{Fusion}
+\subsubsection{Protein Representation Refinement and Interaction Module}
 \label{sec:feature_fusion_module}
 
-Fusion combines protein-side sequence refinement with BiIntention-based
-drug-target matching. The main configuration uses
+The protein representation refinement and interaction module combines
+protein-side sequence refinement with BiIntention-based drug-target matching.
+The main configuration uses
 \texttt{protein\_mamba\_biintention}: Mamba is applied only to the protein token
 stream, and BiIntention remains the pairwise interaction module. Protein
 residues form an ordered biological sequence, whereas drug tokens concatenate
 SMILES semantics, graph topology, and conformer geometry.
 
-\paragraph{Protein Mamba.}
+\paragraph{Protein representation refinement.}
 Given protein tokens $\mathbf{P}$ and mask $\mathbf{m}$, padded positions are
 suppressed before entering the Mamba residual block:
 \begin{equation}
@@ -512,8 +546,10 @@ The block then uses residual and feed-forward updates:
 \begin{aligned}
   \mathbf{R} &=
   \mathbf{P}^{mask}+\operatorname{Dropout}(\mathbf{M}),\\
-  \mathbf{P}^{m} &=
-  \mathbf{R}+\operatorname{FFN}_{m}(\mathbf{R}).
+  \bar{\mathbf{P}}_{\mathrm{Mamba}} &=
+  \mathbf{R}+\operatorname{FFN}_{m}(\mathbf{R}),\\
+  \mathbf{P}_{\mathrm{Mamba},j} &=
+  m_j\bar{\mathbf{p}}_{\mathrm{Mamba},j}.
 \end{aligned}
 \label{eq:mamba_residual}
 \end{equation}
@@ -523,17 +559,17 @@ injected:
   g = \sigma(\eta),\qquad
   \mathbf{P}'
   =
-  \mathbf{P}+g\,(\mathbf{P}^{m}-\mathbf{P}).
+  \mathbf{P}+g\,(\mathbf{P}_{\mathrm{Mamba}}-\mathbf{P}).
   \label{eq:mamba_gate}
 \end{equation}
 The gate logit is initialized as $\eta=-2.0$, giving $g\approx0.119$. The
 mask is applied inside the Mamba residual block; the subsequent BiIntention
 module receives the resulting fixed-length protein token sequence.
 
-\paragraph{BiIntention.}
-After protein-side refinement, TAMR-DTI uses BiIntention to model explicit
-drug-protein compatibility. Self-attention is first applied independently to
-each modality:
+\paragraph{Bidirectional interaction representation.}
+After protein-side refinement, the bidirectional interaction representation path
+uses BiIntention to model explicit drug-protein compatibility. Self-attention is
+first applied independently to each modality:
 \begin{equation}
   \mathbf{D}^{s}=\operatorname{SA}_{D}(\mathbf{D}),\qquad
   \mathbf{P}^{s}=\operatorname{SA}_{P}(\mathbf{P}'),
@@ -552,18 +588,19 @@ attention head $r$ with head dimension $d_h=d/H$,
   \mathbf{V}_{r} &= \mathbf{X}\mathbf{W}^{V}_{r},\\
   \mathbf{A}_{r} &=
   \omega_r\,
-  \operatorname{softmax}_{d_h}
+  \operatorname{softmax}_{\mathrm{feat}}
   \left(
-    (\lambda\mathbf{I}+\mathbf{K}_{r}^{\top}\mathbf{K}_{r})^{\dagger}
+    (\alpha_{\mathrm{ridge}}\mathbf{I}+\mathbf{K}_{r}^{\top}\mathbf{K}_{r})^{\dagger}
     \mathbf{K}_{r}^{\top}\mathbf{V}_{r}
   \right),\\
   \mathbf{O}_{r} &= \mathbf{Q}_{r}\mathbf{A}_{r},
 \end{aligned}
 \label{eq:intention_head}
 \end{equation}
-where $\lambda$ is a shared learnable ridge parameter, $\omega_r$ is a learnable
-head weight, $(\cdot)^{\dagger}$ denotes the Moore-Penrose pseudoinverse, and
-$\operatorname{softmax}_{d_h}$ follows the implementation's head-feature axis.
+where $\alpha_{\mathrm{ridge}}$ is a shared learnable ridge parameter, $\omega_r$
+is a learnable head weight, $(\cdot)^{\dagger}$ denotes the Moore--Penrose
+pseudoinverse, and $\operatorname{softmax}_{\mathrm{feat}}$ follows the
+implementation's head-feature axis.
 Concatenating heads and applying an output projection gives
 $\operatorname{Int}(\mathbf{X},\mathbf{Q})\in\mathbb{R}^{n_q\times d}$. The
 intention block then computes
@@ -607,7 +644,7 @@ max pooling over the final fixed-length BiIntention tensors:
   \label{eq:fusion_pooling}
 \end{equation}
 
-\subsection{Prediction Head}
+\subsubsection{Prediction Module}
 \label{sec:prediction_module}
 
 The prediction head maps the fused pair representation
@@ -649,7 +686,7 @@ transformations:
 The predicted probability is obtained by applying the sigmoid function as in
 Eq.~\ref{eq:dti_prediction}.
 
-\subsection{Training Objective}
+\subsubsection{Training Objective}
 \label{sec:loss_function_training_objective}
 
 The active training objective is weighted binary cross-entropy with logits.

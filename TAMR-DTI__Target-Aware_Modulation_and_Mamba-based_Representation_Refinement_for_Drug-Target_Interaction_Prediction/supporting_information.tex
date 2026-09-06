@@ -1,0 +1,58 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsfonts,bm}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{placeins}
+\usepackage{ragged2e}
+\usepackage{xurl}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\setlength{\emergencystretch}{3em}
+\captionsetup{font=small,labelfont=bf}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theequation}{S\arabic{equation}}
+\newcommand{\TAMR}{TAMR-DTI}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\SiLU}{\operatorname{SiLU}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\LayerNorm}{\operatorname{LayerNorm}}
+\newcommand{\MeanPool}{\operatorname{MeanPool}}
+\newcommand{\MaskedMean}{\operatorname{MaskedMean}}
+
+\title{\textbf{Supporting Information}\\[4pt]
+\large TAMR-DTI: Target-Aware Modulation and Mamba-Based Representation
+Refinement for Drug-Target Interaction Prediction}
+\author{Wei Li$^{1}$, Wei Liu$^{2*}$, Xiaoqing Hu$^{3*}$, and Shenghui Shi$^{1*}$\\[2pt]
+\small $^{1}$Beijing University of Chemical Technology, Beijing, China\\
+\small $^{2}$Academy of Military Medical Sciences, Beijing, China\\
+\small $^{3}$Peking University Third Hospital, Beijing, China\\[2pt]
+\small $^{*}$Corresponding authors: \texttt{liuweilcf@163.com};
+\texttt{huxiaoqingbd01@sina.com}; \texttt{shish@mail.buct.edu.cn}}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\textit{This file is submitted as Supporting Information and is intended to be
+read together with the main manuscript.}
+\end{center}
+
+\tableofcontents
+\clearpage
+
+\input{si_legacy_details.tex}
+\input{si_formula_guide.tex}
+\input{si_tables.tex}
+\input{si_figures.tex}
+
+\end{document}

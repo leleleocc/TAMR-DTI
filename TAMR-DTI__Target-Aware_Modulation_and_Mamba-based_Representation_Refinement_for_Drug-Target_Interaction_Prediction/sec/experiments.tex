@@ -1,9 +1,9 @@
 \section{Experiments}
 \label{sec:experiments}
 
-\subsection{Experimental Setup}
+\subsection{Experimental Settings}
 
-This section describes the datasets, evaluation metrics, and implementation settings used for the main TAMR-DTI experiments. All main results use the full eight-conformer TAMR-DTI model and five fixed random seeds, $\{42,43,44,45,47\}$. For every run, the best checkpoint is selected by validation AUROC. When a threshold-dependent result uses a tuned operating point, the classification threshold is selected only on the validation split and is then applied unchanged to the held-out test split; such results are reported as Acc(val-thr) and F1(val-thr). Fixed-threshold results, when reported, are denoted Acc@0.5 and F1@0.5.
+This subsection defines the experimental protocol used throughout the main benchmark study. It first introduces the four processed DTI datasets and their label distributions, then specifies the training configuration and class-weight settings used for repeated runs, and finally defines the ranking and fixed-threshold metrics used to compare models. All main results use the full eight-conformer TAMR-DTI model and five fixed random seeds, $\{42,43,44,45,46\}$. For every run, the best checkpoint is selected by validation AUROC. When a threshold-dependent result uses a tuned operating point, the classification threshold is selected only on the validation split and is then applied unchanged to the held-out test split; such results are reported as Acc(val-thr) and F1(val-thr). Fixed-threshold results, when reported, are denoted Acc@0.5 and F1@0.5.
 
 \subsubsection{Datasets and Data Distribution}
 
@@ -15,7 +15,7 @@ BioSNAP comes from the Stanford Biomedical Network Dataset Collection and provid
 
 The Human benchmark follows the compound-protein interaction dataset introduced with high-confidence negative sample construction \citep{liu2015credible}. It is the smallest benchmark in our study, with 5,997 interactions and a 43.91\% positive rate. Its compact benchmark size and stronger negative skew make it useful for testing model stability when fewer training examples are available and thresholded metrics are more sensitive to class distribution.
 
-The C. elegans benchmark uses the corresponding Caenorhabditis elegans compound-protein interaction data from the same dataset family \citep{liu2015credible}. The processed split contains 7,786 interactions and is exactly balanced in aggregate. Because it represents a non-human model organism, it complements the Human benchmark and tests whether the learned drug and protein representations transfer across organism-specific interaction sources rather than only across larger mixed-source datasets.
+The C. elegans benchmark uses the corresponding Caenorhabditis elegans compound-protein interaction data from the same dataset family \citep{liu2015credible}. The processed split contains 7,786 interactions and is exactly balanced in aggregate. Because it represents a non-human model organism, it complements the Human benchmark and broadens the evaluation of TAMR-DTI beyond human-derived interaction data.
 
 \begin{table}[!htbp]
 \caption{Dataset statistics used in the main experiments. Counts are computed from the processed training, validation, and test split files used in this study.}
@@ -34,52 +34,6 @@ C. elegans & 1,767 & 1,876 & 7,786 & 3,893 & 3,893 & 50.00\% \\
 \end{center}
 \end{table}
 
-\subsubsection{Evaluation Metrics}
-
-We report two threshold-independent ranking metrics, AUROC and AUPRC, and two threshold-dependent classification metrics, Acc@0.5 and F1@0.5. For a binary DTI prediction task, true positives (TP) are interacting drug-target pairs correctly predicted as positive, true negatives (TN) are non-interacting pairs correctly predicted as negative, false positives (FP) are non-interacting pairs predicted as positive, and false negatives (FN) are interacting pairs predicted as negative.
-
-AUROC is the area under the receiver operating characteristic (ROC) curve. For a decision threshold $\tau$, the true positive rate and false positive rate are
-\begin{equation}
-\mathrm{TPR}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}, \qquad
-\mathrm{FPR}(\tau)=\frac{\mathrm{FP}(\tau)}{\mathrm{FP}(\tau)+\mathrm{TN}(\tau)}.
-\end{equation}
-The ROC curve varies $\tau$ over the prediction-score range, so AUROC measures positive-negative ranking quality independent of any single threshold. AUROC therefore is not reported with an @0.5 suffix.
-
-At a fixed operating threshold, sensitivity is equivalent to recall or true
-positive rate, while specificity measures the true negative rate:
-\begin{equation}
-\mathrm{Sensitivity}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}, \qquad
-\mathrm{Specificity}(\tau)=\frac{\mathrm{TN}(\tau)}{\mathrm{TN}(\tau)+\mathrm{FP}(\tau)}.
-\end{equation}
-Sensitivity reflects how many true interactions are recovered, whereas
-specificity reflects how many non-interacting pairs are correctly rejected.
-Both metrics depend on the chosen threshold and should therefore be interpreted
-as operating-point metrics rather than ranking metrics.
-
-AUPRC is the area under the precision-recall curve. For threshold $\tau$,
-\begin{equation}
-\mathrm{Precision}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FP}(\tau)}, \qquad
-\mathrm{Recall}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}.
-\end{equation}
-AUPRC emphasizes retrieval quality for the positive interaction class and is useful when positive-label rates differ across datasets. Like AUROC, AUPRC is computed across thresholds and is not an @0.5 metric.
-
-For fixed-threshold classification metrics, we convert a predicted interaction probability $p_i$ into a binary prediction using $\hat{y}^{0.5}_i=\mathbb{I}(p_i\geq0.5)$. Acc@0.5 measures overall correctness at this fixed threshold,
-\begin{equation}
-\mathrm{Acc@0.5}=\frac{\mathrm{TP}_{0.5}+\mathrm{TN}_{0.5}}
-{\mathrm{TP}_{0.5}+\mathrm{TN}_{0.5}+\mathrm{FP}_{0.5}+\mathrm{FN}_{0.5}},
-\end{equation}
-where the subscript $0.5$ indicates counts computed after thresholding at 0.5. F1@0.5 is the harmonic mean of precision and recall at the same fixed threshold,
-\begin{equation}
-\mathrm{F1@0.5}=
-\frac{2\,\mathrm{Precision}_{0.5}\,\mathrm{Recall}_{0.5}}
-{\mathrm{Precision}_{0.5}+\mathrm{Recall}_{0.5}}
-=
-\frac{2\,\mathrm{TP}_{0.5}}
-{2\,\mathrm{TP}_{0.5}+\mathrm{FP}_{0.5}+\mathrm{FN}_{0.5}}.
-\end{equation}
-
-Thresholded accuracy and F1 must always be interpreted together with their threshold. If a result uses a validation-selected threshold $\tau_{\mathrm{val}}$ instead of 0.5, we denote it as Acc(val-thr) or F1(val-thr). In that setting, $\tau_{\mathrm{val}}$ is selected only on the validation split and then applied unchanged to the test split. For TAMR-DTI, repeated-run summaries are reported as mean $\pm$ standard deviation across five seeds. We also report 95\% confidence intervals computed as $\bar{x} \pm t_{0.975,4}s/\sqrt{5}$, with $t_{0.975,4}=2.776$.
-
 \subsubsection{Experimental Configuration}
 \label{sec:implementation_details}
 
@@ -91,7 +45,7 @@ The learning rate follows a plateau decay strategy: if validation performance do
 \caption{Basic training hyperparameters for the main experiments.}
 \label{tab:training_hyperparameters}
 \begin{center}
-\scriptsize
+\normalsize
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{0.42\linewidth}}
 \toprule
@@ -142,6 +96,52 @@ C. elegans & 2,727 & 2,723 & 0.9985 \\
 \end{tabular}
 \end{center}
 \end{table}
+
+\subsubsection{Evaluation Metrics}
+
+We report two threshold-independent ranking metrics, AUROC and AUPRC, and two threshold-dependent classification metrics, Acc@0.5 and F1@0.5. For a binary DTI prediction task, true positives (TP) are interacting drug-target pairs correctly predicted as positive, true negatives (TN) are non-interacting pairs correctly predicted as negative, false positives (FP) are non-interacting pairs predicted as positive, and false negatives (FN) are interacting pairs predicted as negative.
+
+AUROC is the area under the receiver operating characteristic (ROC) curve. For a decision threshold $\tau$, the true positive rate and false positive rate are
+\begin{equation}
+\mathrm{TPR}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}, \qquad
+\mathrm{FPR}(\tau)=\frac{\mathrm{FP}(\tau)}{\mathrm{FP}(\tau)+\mathrm{TN}(\tau)}.
+\end{equation}
+The ROC curve varies $\tau$ over the prediction-score range, so AUROC measures positive-negative ranking quality independent of any single threshold. AUROC therefore is not reported with an @0.5 suffix.
+
+At a fixed operating threshold, sensitivity is equivalent to recall or true
+positive rate, while specificity measures the true negative rate:
+\begin{equation}
+\mathrm{Sensitivity}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}, \qquad
+\mathrm{Specificity}(\tau)=\frac{\mathrm{TN}(\tau)}{\mathrm{TN}(\tau)+\mathrm{FP}(\tau)}.
+\end{equation}
+Sensitivity reflects how many true interactions are recovered, whereas
+specificity reflects how many non-interacting pairs are correctly rejected.
+Both metrics depend on the chosen threshold and should therefore be interpreted
+as operating-point metrics rather than ranking metrics.
+
+AUPRC is the area under the precision-recall curve. For threshold $\tau$,
+\begin{equation}
+\mathrm{Precision}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FP}(\tau)}, \qquad
+\mathrm{Recall}(\tau)=\frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)}.
+\end{equation}
+AUPRC emphasizes retrieval quality for the positive interaction class and is useful when positive-label rates differ across datasets. Like AUROC, AUPRC is computed across thresholds and is not an @0.5 metric.
+
+For fixed-threshold classification metrics, we convert a predicted interaction probability $p_i$ into a binary prediction using $\hat{y}^{0.5}_i=\mathbb{I}(p_i\geq0.5)$. Acc@0.5 measures overall correctness at this fixed threshold,
+\begin{equation}
+\mathrm{Acc@0.5}=\frac{\mathrm{TP}_{0.5}+\mathrm{TN}_{0.5}}
+{\mathrm{TP}_{0.5}+\mathrm{TN}_{0.5}+\mathrm{FP}_{0.5}+\mathrm{FN}_{0.5}},
+\end{equation}
+where the subscript $0.5$ indicates counts computed after thresholding at 0.5. F1@0.5 is the harmonic mean of precision and recall at the same fixed threshold,
+\begin{equation}
+\mathrm{F1@0.5}=
+\frac{2\,\mathrm{Precision}_{0.5}\,\mathrm{Recall}_{0.5}}
+{\mathrm{Precision}_{0.5}+\mathrm{Recall}_{0.5}}
+=
+\frac{2\,\mathrm{TP}_{0.5}}
+{2\,\mathrm{TP}_{0.5}+\mathrm{FP}_{0.5}+\mathrm{FN}_{0.5}}.
+\end{equation}
+
+Thresholded accuracy and F1 must always be interpreted together with their threshold. If a result uses a validation-selected threshold $\tau_{\mathrm{val}}$ instead of 0.5, we denote it as Acc(val-thr) or F1(val-thr). In that setting, $\tau_{\mathrm{val}}$ is selected only on the validation split and then applied unchanged to the test split. For TAMR-DTI, repeated-run summaries are reported as mean $\pm$ standard deviation across five seeds. We also report 95\% confidence intervals computed as $\bar{x} \pm t_{0.975,4}s/\sqrt{5}$, with $t_{0.975,4}=2.776$.
 
 \subsection{Baseline Methods}
 
@@ -207,7 +207,7 @@ ranks interacting drug-target pairs ahead of non-interacting pairs. This ranking
 setting is especially important for DTI prediction, where candidate interactions
 are often prioritized before a downstream decision threshold is chosen.
 
-Table~\ref{tab:baseline_landscape} shows that TAMR-DTI obtains the strongest
+The baseline landscape summarized in Table~\ref{tab:baseline_landscape} shows that TAMR-DTI obtains the strongest
 reported AUROC/AUPRC values on all four benchmarks. On BindingDB, TAMR-DTI
 improves the reported AUROC/AUPRC envelope from 0.960/0.945 to 0.964/0.954. On
 BioSNAP, the gain is larger, reaching 0.930 AUROC and 0.935 AUPRC. On Human,
@@ -228,17 +228,17 @@ where TAMR-DTI improves the ranking metrics while maintaining strong
 fixed-threshold accuracy. Human is the smallest benchmark in this study, yet the
 model still achieves the best reported AUROC/AUPRC values, showing that the
 architecture remains effective when training support is more limited. C. elegans
-provides a non-human organism benchmark, and the strong AUROC/AUPRC results
-show that the learned representation is not restricted to human interaction
-patterns.
+provides a non-human organism benchmark, and the strong reported AUROC/AUPRC
+results show that TAMR-DTI remains competitive when trained and evaluated on
+this non-human interaction dataset.
 
-Table~\ref{tab:tamr_main_summary} reports the TAMR-DTI repeated-run summary
-across all four metrics. The AUROC and AUPRC columns give the main ranking
-evidence, while Acc@0.5 and F1@0.5 provide a fixed-threshold view of the same
-runs.
+The repeated-run table reports the five-seed TAMR-DTI summary across all four
+metrics in Table~\ref{tab:tamr_main_summary}. The AUROC and AUPRC columns give
+the main ranking evidence, while Acc@0.5 and F1@0.5 provide a fixed-threshold
+view of the same runs.
 
 \begin{table}[!htbp]
-\caption{TAMR-DTI repeated-run summary across the four benchmark datasets. Values are mean $\pm$ standard deviation over seeds 42, 43, 44, 45, and 47.}
+\caption{TAMR-DTI repeated-run summary across the four benchmark datasets. Values are mean $\pm$ standard deviation over seeds 42, 43, 44, 45, and 46.}
 \label{tab:tamr_main_summary}
 \begin{center}
 \scriptsize
@@ -288,7 +288,7 @@ The seed-level view in Figure~\ref{fig:main_seed_stability} is used for this int
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{figures/main_seed_stability.pdf}
-\caption{Five-seed stability of TAMR-DTI on the four benchmark datasets. Dots denote individual seeds 42, 43, 44, 45, and 47; diamonds denote seed means; and error bars denote one standard deviation. Acc@0.5 and F1@0.5 use the fixed threshold 0.5.}
+\caption{Five-seed stability of TAMR-DTI on the four benchmark datasets. Dots denote individual seeds 42, 43, 44, 45, and 46; diamonds denote seed means; and error bars denote one standard deviation. Acc@0.5 and F1@0.5 use the fixed threshold 0.5.}
 \label{fig:main_seed_stability}
 \end{figure}
 
@@ -376,17 +376,17 @@ Together with the benchmark comparison, these diagnostics explain why BioSNAP is
 \FloatBarrier
 \subsubsection{Interpretability analysis}
 
-The conformer-count comparison shows that exposing multiple candidate geometries is useful, but it does not reveal how the trained model distributes probability mass across those geometries for individual drug-target pairs. We therefore conduct a conformer-weight interpretability analysis on the BioSNAP seed-42 model (best checkpoint at epoch~\BiosnapBestEpoch, validation AUROC \BiosnapValAUROC, test AUROC \BiosnapTestAUROC), using the validation-selected threshold $\tau_{\mathrm{val}}=\BiosnapValThreshold$ only to assign prediction groups in the diagnostic plots. The analysis covers all \InterpNumSamples~BioSNAP test pairs and focuses only on the target-aware conformer weights produced by the protein-conditioned aggregation module.
+The conformer-count comparison shows that exposing multiple candidate geometries is useful, but it does not reveal how the final BioSNAP model uses those geometries at inference time. We therefore perform a post-hoc forward-pass analysis with the fixed BioSNAP seed-42 checkpoint (best checkpoint at epoch~\BiosnapBestEpoch, validation AUROC \BiosnapValAUROC, test AUROC \BiosnapTestAUROC). No additional model or explainer is trained, and no parameter update is performed for this analysis. Instead, we run the held-out BioSNAP test pairs through the checkpoint once and collect the target-conditioned conformer weights emitted by the protein-conditioned aggregation module. The validation-selected threshold $\tau_{\mathrm{val}}=\BiosnapValThreshold$ is used only to assign TP/TN/FP/FN groups for stratified diagnostics. The resulting analysis covers all \InterpNumSamples~BioSNAP test pairs.
 
-For the target-aware conformer module, the model produces a distribution over the $K$ valid conformers of a drug molecule. For a test pair $i$, let $\mathbf{w}_i=\{w_{i1},\ldots,w_{iK}\}$ denote the conformer weights. We quantify the sharpness of conformer selection by the normalized entropy
+For each drug-target pair, the forward pass assigns a probability distribution over the valid conformers in the precomputed conformer cache. Let $\mathbf{w}_i=\{w_{i1},\ldots,w_{iK_i}\}$ denote these aggregation weights for test pair $i$, where $K_i$ is the number of valid conformers. We quantify the sharpness of target-conditioned conformer usage by the normalized entropy
 \begin{equation}
 \bar{H}_i=-\frac{1}{\log K_i}\sum_{k=1}^{K_i} w_{ik}\log(w_{ik}+\epsilon),
 \end{equation}
-where $K_i$ is the number of valid conformers and $\epsilon$ is a small constant for numerical stability. A smaller $\bar{H}_i$ indicates that the prediction depends more strongly on a small subset of conformers, whereas a larger value indicates softer multi-conformer aggregation.
+where $\epsilon$ is a small constant for numerical stability. A smaller $\bar{H}_i$ indicates that the forward prediction concentrates on a small subset of conformers, whereas a larger value indicates softer multi-conformer aggregation.
 
-To avoid cherry-picking, we report the within-sample sorted-weight distribution across the entire test set rather than a small selected heatmap. Figure~\ref{fig:interpretability_conformer_weights} reports, separately for true positives ($n=\InterpTPCount$), true negatives ($n=\InterpTNCount$), false positives ($n=\InterpFPCount$), and false negatives ($n=\InterpFNCount$), the median, IQR, and 5--95\% band of the conformer-weight value at each rank after sorting the weights in descending order within each sample. Across the full test set, the mean top-1 conformer weight is \InterpTopOneMean{} and the mean top-1 margin is \InterpMarginMean. The mean normalized conformer entropy is \InterpEntropyMean, indicating that the model learns a graded but clearly non-uniform conformer distribution rather than reducing aggregation to uniform averaging.
+To avoid cherry-picking individual examples, we summarize the within-sample sorted-weight distribution over the entire test set. Figure~\ref{fig:interpretability_conformer_weights} reports, separately for true positives ($n=\InterpTPCount$), true negatives ($n=\InterpTNCount$), false positives ($n=\InterpFPCount$), and false negatives ($n=\InterpFNCount$), the median, IQR, and 5--95\% band of the conformer-weight value at each rank after sorting the weights in descending order within each sample. Across all test pairs, the mean top-1 conformer weight is \InterpTopOneMean{} and the mean top-1 margin is \InterpMarginMean. The mean normalized conformer entropy is \InterpEntropyMean, showing that inference-time aggregation is clearly non-uniform while still retaining a graded contribution from multiple conformers.
 
-The prediction-group statistics suggest one failure pattern of the learned conformer selector. False negatives have the sharpest conformer distribution, with higher top-1 weight (\InterpFNTopOne) and lower normalized entropy (\InterpFNEntropy) than true positives (top-1 \InterpTPTopOne, entropy \InterpTPEntropy) and true negatives (top-1 \InterpTNTopOne, entropy \InterpTNEntropy). A coarse quartile comparison shows the same trend without relying on the TP/TN/FP/FN grouping: samples in the lowest entropy quartile ($\bar{H}\le\InterpLowEntropyCutoff$) have a higher error rate than samples in the highest entropy quartile ($\bar{H}\ge\InterpHighEntropyCutoff$), \InterpLowEntropyErrorRate{} versus \InterpHighEntropyErrorRate. This suggests that the useful behavior of the conformer branch is not simply selecting the single most dominant geometry; overly sharp conformer selection is associated with less reliable decisions, while softer target-aware mixtures are more often correct.
+The prediction-group statistics suggest one inference-time failure pattern. False negatives have the sharpest conformer distributions, with higher top-1 weight (\InterpFNTopOne) and lower normalized entropy (\InterpFNEntropy) than true positives (top-1 \InterpTPTopOne, entropy \InterpTPEntropy) and true negatives (top-1 \InterpTNTopOne, entropy \InterpTNEntropy). A coarse quartile comparison shows the same tendency without relying on the TP/TN/FP/FN grouping: samples in the lowest entropy quartile ($\bar{H}\le\InterpLowEntropyCutoff$) have a higher error rate than samples in the highest entropy quartile ($\bar{H}\ge\InterpHighEntropyCutoff$), \InterpLowEntropyErrorRate{} versus \InterpHighEntropyErrorRate. This observation should be read as diagnostic rather than causal: the conformer branch is most useful not when it collapses to a single dominant geometry, but when it uses the protein context to retain an appropriate mixture of plausible conformers.
 
 \begin{figure}[!htbp]
 \centering

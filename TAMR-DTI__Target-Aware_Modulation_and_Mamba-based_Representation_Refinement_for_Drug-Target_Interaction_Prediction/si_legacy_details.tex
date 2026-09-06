@@ -1,0 +1,294 @@
+\section{Data, Preprocessing, and Reproducibility Details}
+\label{si:legacy_details}
+
+This section preserves and expands the data and implementation information from
+the previously prepared Supporting Information. It is included so that the new
+equation guide and standalone artwork do not remove any reproducibility details
+from the earlier SI version.
+
+\subsection{Dataset Sources and Processed Splits}
+
+We evaluate four public drug-target interaction benchmarks: BindingDB,
+BioSNAP, Human, and C. elegans. Each sample contains a drug SMILES string, a
+protein sequence, and a binary interaction label. The statistics below are
+computed from the processed training, validation, and test split files used by
+the experiments. The split files are fixed across repeated runs; the seed is
+varied for model initialization and training stochasticity.
+
+\begin{table}[!htbp]
+\centering
+\caption{Processed dataset statistics used by the manuscript.}
+\label{tab:si_processed_dataset_stats}
+\begin{tabular}{lrrrrrr}
+\toprule
+Dataset & Drugs & Proteins & Interactions & Positive & Negative & Positive rate \\
+\midrule
+BindingDB & 14,643 & 2,623 & 49,199 & 20,674 & 28,525 & 42.02\% \\
+BioSNAP & 4,505 & 2,181 & 27,464 & 13,830 & 13,634 & 50.36\% \\
+Human & 2,726 & 2,001 & 5,997 & 2,633 & 3,364 & 43.91\% \\
+C. elegans & 1,767 & 1,876 & 7,786 & 3,893 & 3,893 & 50.00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Training-split class counts and positive-class weights.}
+\label{tab:si_training_weights}
+\begin{tabular}{lrrr}
+\toprule
+Dataset & Training positives & Training negatives & Positive weight $N_-/N_+$ \\
+\midrule
+BindingDB & 14,583 & 19,856 & 1.3616 \\
+BioSNAP & 9,684 & 9,540 & 0.9851 \\
+Human & 1,846 & 2,351 & 1.2736 \\
+C. elegans & 2,727 & 2,723 & 0.9985 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Data access points are listed in the manuscript Data Availability Statement:
+BindingDB, BioSNAP, and the Human/C. elegans benchmark files in the
+TransformerCPI repository.
+
+\subsection{Input Processing and Feature-Cache Schema}
+
+SMILES strings are encoded by a ChemBERTa hidden-state cache and converted to
+DGL molecular graphs. Protein sequences are encoded by a ProtBERT hidden-state
+cache. The data loader validates cache shapes and retains explicit masks for
+protein residues and invalid conformer slots. The main model uses the vanilla
+cache variant, \texttt{drug3d\_features.pt}.
+
+\begin{table}[!htbp]
+\centering
+\caption{Feature-cache tensors and dimensions.}
+\label{tab:si_cache_schema}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.15\linewidth}>{\RaggedRight\arraybackslash}p{0.24\linewidth}>{\RaggedRight\arraybackslash}p{0.18\linewidth}>{\RaggedRight\arraybackslash}p{0.32\linewidth}}
+\toprule
+Stream & File or tensor & Shape & Processing and use \\
+\midrule
+Drug 1D & \texttt{smiles\_features.pt} & $354\times128$ & ChemBERTa token hidden states after adaptive pooling. \\
+Drug graph & DGL graph & Up to $290\times75$ & Canonical atom/bond features; self-loops enabled. \\
+Drug 3D & \texttt{drug3d\_features.pt} & $K\times64\times128$ & Per-conformer atom features; $K=8$ in the main model. \\
+Coordinates & 3D conformer coordinates & $K\times64\times3$ & Coordinates consumed by the EGNN branch. \\
+Conformer metadata & \texttt{conf\_mask}, energy & $K$, $K$ & Validity mask and UFF energy for target-aware scoring. \\
+Protein & \texttt{protein\_features.pt} & $128\times1024$ & ProtBERT residue features after pooling; residue mask retained. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+RDKit ETKDGv3 generates up to eight conformers. The extraction routine uses
+random seed 42, RMSD pruning threshold 0.5, and one embedding thread. UFF
+optimization is attempted for at most 100 iterations when parameters are
+available. Molecules with more than 160 heavy atoms are skipped by the 3D
+extraction guard. Protein sequences are upper-cased after whitespace removal;
+U, Z, O, and B are replaced with X before token encoding. The model-side
+protein length is padded or masked to 128. The feature-extraction schema
+version is 3.
+
+\subsection{Complete Architecture Configuration}
+
+The model uses a 128-dimensional shared latent space. Protein context first
+conditions target-aware conformer scoring. The resulting drug representation
+provides a ligand context for FiLM modulation of protein tokens. A
+bidirectional protein-side Mamba block refines the protein sequence before
+one-layer BiIntention cross-modal matching.
+
+\begin{table}[!htbp]
+\centering
+\caption{Main TAMR-DTI architecture configuration.}
+\label{tab:si_architecture_config}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.25\linewidth}>{\RaggedRight\arraybackslash}p{0.64\linewidth}}
+\toprule
+Component & Setting \\
+\midrule
+Drug graph encoder & Input node dimension 75; hidden dimensions [128, 128, 128]; maximum graph length 290. \\
+Target-aware conformer encoder & EGNN dimension 128; $K=8$; 64 atoms per conformer; protein-conditioned score input; energy projection included. \\
+Drug fusion & Graph and conformer tokens form 354 structural slots; layer-normalized fusion with a learned sigmoid gate initialized at bias $-2.0$. \\
+Protein encoder & 1024-dimensional ProtBERT features projected to 128; three ProteinACmix layers; kernels 3, 6, 9; eight heads; ligand FiLM scale 0.05. \\
+Protein Mamba & Protein tokens only; bidirectional; $d_{\rm state}=16$; $d_{\rm conv}=4$; expansion 2; dropout 0.1; Mamba-1 backend; gate bias $-2.0$. \\
+BiIntention & One layer; eight heads; embedding dimension 128; bidirectional drug-protein intention updates. \\
+Prediction head & Four-layer MLP; input 256; hidden 256; intermediate output 128; binary logit output. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Training, Loss, and Evaluation}
+
+\begin{table}[!htbp]
+\centering
+\caption{Training and evaluation settings.}
+\label{tab:si_training_evaluation}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.28\linewidth}>{\RaggedRight\arraybackslash}p{0.59\linewidth}}
+\toprule
+Setting & Value \\
+\midrule
+Optimizer & Adam \\
+Initial learning rate & $1\times10^{-4}$ \\
+Weight decay & $1\times10^{-4}$ \\
+Maximum epochs & 100 \\
+Batch and accumulation & 16 per GPU; gradient accumulation 4 steps \\
+Gradient clipping & Maximum norm 1.0 \\
+Scheduler & Plateau; factor 0.5; patience 5; minimum learning rate $1\times10^{-6}$ \\
+Early stopping & Patience 10; minimum improvement $1\times10^{-4}$ \\
+Checkpoint & Highest validation AUROC \\
+Runtime & Python 3.9; PyTorch, DeepSpeed ZeRO-2, DGL/DGLLife, RDKit, Transformers, and mamba-ssm; eight Tesla P100 GPUs. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For completeness, the threshold-dependent metrics used in the manuscript are
+defined below. The threshold $\tau$ is applied to the predicted probability.
+\begin{align}
+\mathrm{Accuracy}(\tau)
+ &= \frac{\mathrm{TP}(\tau)+\mathrm{TN}(\tau)}
+ {\mathrm{TP}(\tau)+\mathrm{TN}(\tau)+\mathrm{FP}(\tau)+\mathrm{FN}(\tau)},\\
+\mathrm{Precision}(\tau)
+ &= \frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FP}(\tau)},\\
+\mathrm{Recall}(\tau)
+ &= \frac{\mathrm{TP}(\tau)}{\mathrm{TP}(\tau)+\mathrm{FN}(\tau)},\\
+\mathrm{F1}(\tau)
+ &= \frac{2\,\mathrm{Precision}(\tau)\,\mathrm{Recall}(\tau)}
+ {\mathrm{Precision}(\tau)+\mathrm{Recall}(\tau)}.
+\end{align}
+The validation threshold is searched over $0.01,0.02,\ldots,0.99$ and then
+applied unchanged to the held-out test split. Fixed-threshold results use
+$\tau=0.5$.
+
+\subsection{Main Run Matrix}
+
+All four datasets use the same main architecture and five fixed seeds, 42
+through 46. Configuration identifiers correspond to files under
+\texttt{configs/experiments/}.
+
+\begin{table}[!htbp]
+\centering
+\caption{Main repeated-seed configuration index.}
+\label{tab:si_run_matrix}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lll}
+\toprule
+Dataset & Seed & Configuration \\
+\midrule
+BindingDB & 42 & \texttt{stage2\_main\_01} \\
+BindingDB & 43 & \texttt{stage2\_main\_02} \\
+BindingDB & 44 & \texttt{stage2\_main\_03} \\
+BindingDB & 45 & \texttt{stage2\_main\_04} \\
+BindingDB & 46 & \texttt{stage2\_main\_05} \\
+BioSNAP & 42 & \texttt{stage2\_main\_06} \\
+BioSNAP & 43 & \texttt{stage2\_main\_07} \\
+BioSNAP & 44 & \texttt{stage2\_main\_08} \\
+BioSNAP & 45 & \texttt{stage2\_main\_09} \\
+BioSNAP & 46 & \texttt{stage2\_main\_10} \\
+Human & 42 & \texttt{stage2\_main\_11} \\
+Human & 43 & \texttt{stage2\_main\_12} \\
+Human & 44 & \texttt{stage2\_main\_13} \\
+Human & 45 & \texttt{stage2\_main\_14} \\
+Human & 46 & \texttt{stage2\_main\_15} \\
+C. elegans & 42 & \texttt{stage2\_main\_16} \\
+C. elegans & 43 & \texttt{stage2\_main\_17} \\
+C. elegans & 44 & \texttt{stage2\_main\_18} \\
+C. elegans & 45 & \texttt{stage2\_main\_19} \\
+C. elegans & 46 & \texttt{stage2\_main\_20} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Expanded Performance and Diagnostic Results}
+
+The standalone tables in Section~\ref{si:tables} reproduce the main
+AUROC/AUPRC comparison, the repeated-run summary, the BioSNAP module ablation,
+and the conformer-count diagnostic. All diagnostics use BioSNAP, seed 42, the
+same fixed split, validation-AUROC checkpoint selection, and fixed-threshold
+evaluation. They are single-seed mechanism diagnostics rather than repeated-run
+significance tests.
+
+\subsection{Conformer-Weight and Mamba Interpretability}
+
+The analysis uses all 5,493 BioSNAP test pairs from the seed-42 target-aware
+model. For each sample, conformer weights are sorted in descending order, and
+prediction groups use validation threshold 0.62. Normalized conformer entropy is
+calculated as
+\begin{equation}
+\bar H_i=-\frac{1}{\log K_i}\sum_{k=1}^{K_i}w_{ik}\log(w_{ik}+\epsilon),
+\end{equation}
+where $K_i$ is the number of valid conformers for sample $i$ and $\epsilon$ is
+a numerical-stability constant.
+
+\begin{table}[!htbp]
+\centering
+\caption{Population-level interpretability statistics.}
+\label{tab:si_interpretability_statistics}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Group & $n$ & Top-1 weight & Entropy & Mamba refine mean \\
+\midrule
+All test pairs & 5,493 & 0.5975 & 0.4799 & 0.094526 \\
+True positive & 2,175 & $0.5910\pm0.2341$ & $0.4876\pm0.2545$ & 0.093963 \\
+True negative & 2,328 & $0.5974\pm0.2311$ & $0.4808\pm0.2517$ & 0.095077 \\
+False positive & 417 & $0.5857\pm0.2287$ & $0.4834\pm0.2468$ & 0.093675 \\
+False negative & 573 & $0.6309\pm0.2401$ & $0.4446\pm0.2651$ & 0.095047 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Median sorted conformer weights by prediction group.}
+\label{tab:si_sorted_conformer_weights}
+\begin{tabular}{lrrrr}
+\toprule
+Group & Rank 1 & Rank 2 & Rank 3 & Rank 4 \\
+\midrule
+True positive & 0.5320 & 0.2479 & 0.0946 & 0.0121 \\
+True negative & 0.5288 & 0.2457 & 0.0964 & 0.0137 \\
+False positive & 0.5192 & 0.2579 & 0.1036 & 0.0132 \\
+False negative & 0.5804 & 0.2317 & 0.0756 & 0.0053 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Auxiliary modulation statistics from the interpretability analysis.}
+\label{tab:si_auxiliary_modulation}
+\begin{tabular}{lr}
+\toprule
+Quantity & Mean \\
+\midrule
+Mamba gate & 0.132949 \\
+Conformer top-1 margin & 0.365227 \\
+Protein FiLM layer 1 strength & 0.020351 \\
+Protein FiLM layer 2 strength & 0.013285 \\
+Protein FiLM layer 3 strength & 0.012323 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The sample-level analysis file is
+\url{outputs/interpretability/biosnap_seed42/biosnap_seed42_interpretability_samples.csv}.
+It records prediction groups, threshold, conformer entropy, top-1 weight,
+conformer margin, Mamba summaries, eight conformer weights, and layer-wise FiLM
+statistics.
+
+\subsection{Reproducibility and Availability}
+
+The implementation, preprocessing code, and experiment configuration files are
+available at \url{https://github.com/leleleocc/TAMR-DTI}. Model code is under
+\texttt{src/}, feature extraction is under \texttt{scripts/pre\_extract.py},
+and the run configurations listed in Table~\ref{tab:si_run_matrix} are under
+\texttt{configs/experiments/}. To reproduce a run, obtain the public benchmark
+files, construct the fixed split directory with \texttt{train.csv},
+\texttt{val.csv}, and \texttt{test.csv}, build the ChemBERTa, ProtBERT, graph,
+and 3D caches with the settings above, and launch the corresponding
+configuration. Select the checkpoint by validation AUROC and evaluate the
+held-out test set under the metric conventions in this SI and the manuscript.

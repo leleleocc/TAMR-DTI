@@ -1,0 +1,152 @@
+\section{Standalone Tables}
+\label{si:tables}
+
+The following tables are supplied as standalone, selectable-text versions for
+reviewer inspection and high-resolution reading. They reproduce the numerical
+values reported in the manuscript and add no new statistical claims. The
+equation guide and the machine-readable data/code links in the manuscript
+should be used for interpretation and reuse.
+
+\begin{table}[!htbp]
+\centering
+\caption{Dataset statistics used in the main experiments. Counts are computed from the processed training, validation, and test split files used in this study.}
+\label{tab:si_dataset_overview}
+\begin{tabular}{lrrrrrr}
+\toprule
+Dataset & Drugs & Proteins & Interactions & Positive & Negative & Positive rate \\
+\midrule
+BindingDB & 14,643 & 2,623 & 49,199 & 20,674 & 28,525 & 42.02\% \\
+BioSNAP & 4,505 & 2,181 & 27,464 & 13,830 & 13,634 & 50.36\% \\
+Human & 2,726 & 2,001 & 5,997 & 2,633 & 3,364 & 43.91\% \\
+C. elegans & 1,767 & 1,876 & 7,786 & 3,893 & 3,893 & 50.00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Basic training hyperparameters for the main experiments.}
+\label{tab:si_training_hyperparameters}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.40\linewidth}>{\RaggedRight\arraybackslash}p{0.42\linewidth}}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Optimizer & Adam \\
+Initial learning rate & $1\times10^{-4}$ \\
+Weight decay & $1\times10^{-4}$ \\
+Maximum epochs & 100 \\
+Micro-batch size & 16 per GPU \\
+Gradient accumulation & 4 steps \\
+Gradient clipping & 1.0 \\
+Learning-rate decay factor & 0.5 \\
+Minimum learning rate & $1\times10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Dataset-specific positive-class weights used by the binary cross-entropy loss.}
+\label{tab:si_dataset_pos_weight}
+\begin{tabular}{lrrr}
+\toprule
+Dataset & Training positives & Training negatives & Positive-class weight \\
+\midrule
+BindingDB & 14,583 & 19,856 & 1.3616 \\
+BioSNAP & 9,684 & 9,540 & 0.9851 \\
+Human & 1,846 & 2,351 & 1.2736 \\
+C. elegans & 2,727 & 2,723 & 0.9985 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
+\begin{table}[!htbp]
+\centering
+\caption{AUROC/AUPRC comparison on four benchmark datasets. Baseline values are adopted from reported results; TAMR-DTI values are from five-seed runs and are shown as mean $\pm$ standard deviation.}
+\label{tab:si_baseline_landscape}
+\scriptsize
+\setlength{\tabcolsep}{2.3pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{BindingDB} & \multicolumn{2}{c}{BioSNAP} & \multicolumn{2}{c}{Human} & \multicolumn{2}{c}{C. elegans} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Method & AUROC & AUPRC & AUROC & AUPRC & AUROC & AUPRC & AUROC & AUPRC \\
+\midrule
+SVM & $0.904\pm0.002$ & $0.865\pm0.001$ & $0.819\pm0.045$ & $0.839\pm0.038$ & $0.913\pm0.012$ & $0.905\pm0.001$ & $0.925\pm0.009$ & $0.907\pm0.002$ \\
+RF & $0.942\pm0.001$ & $0.923\pm0.001$ & $0.857\pm0.009$ & $0.872\pm0.006$ & $0.939\pm0.009$ & $0.927\pm0.001$ & $0.935\pm0.009$ & $0.931\pm0.001$ \\
+KNN & $0.895\pm0.001$ & $0.865\pm0.002$ & $0.842\pm0.003$ & $0.805\pm0.003$ & $0.915\pm0.002$ & $0.902\pm0.002$ & $0.912\pm0.003$ & $0.896\pm0.002$ \\
+LR & $0.916\pm0.003$ & $0.884\pm0.002$ & $0.821\pm0.004$ & $0.796\pm0.002$ & $0.895\pm0.003$ & $0.862\pm0.001$ & $0.892\pm0.002$ & $0.883\pm0.003$ \\
+GraphDTA & $0.944\pm0.004$ & $0.925\pm0.006$ & $0.871\pm0.004$ & $0.870\pm0.006$ & $0.965\pm0.003$ & $0.955\pm0.003$ & $0.959\pm0.004$ & $0.951\pm0.002$ \\
+DrugBAN & $0.952\pm0.001$ & $0.936\pm0.001$ & $0.902\pm0.001$ & $0.905\pm0.002$ & $0.979\pm0.001$ & $0.969\pm0.005$ & $0.981\pm0.002$ & $0.978\pm0.002$ \\
+IIFDTI & $0.924\pm0.002$ & $0.901\pm0.004$ & $0.895\pm0.003$ & $0.898\pm0.005$ & $0.977\pm0.003$ & $0.967\pm0.027$ & $0.984\pm0.002$ & $0.979\pm0.002$ \\
+TransformerCPI & $0.895\pm0.002$ & $0.861\pm0.003$ & $0.843\pm0.008$ & $0.859\pm0.007$ & $0.956\pm0.005$ & $0.943\pm0.002$ & $0.975\pm0.003$ & $0.975\pm0.002$ \\
+MolTrans & $0.935\pm0.003$ & $0.901\pm0.004$ & $0.879\pm0.006$ & $0.882\pm0.006$ & $0.979\pm0.003$ & $0.975\pm0.002$ & $0.982\pm0.002$ & $0.979\pm0.002$ \\
+BINDTI & $0.956\pm0.001$ & $0.942\pm0.002$ & $0.895\pm0.003$ & $0.894\pm0.003$ & $0.980\pm0.001$ & $0.975\pm0.004$ & $0.985\pm0.002$ & $0.984\pm0.002$ \\
+LDM-DTI & $0.960\pm0.002$ & $0.945\pm0.002$ & $0.908\pm0.003$ & $0.906\pm0.003$ & $0.981\pm0.001$ & $0.976\pm0.002$ & $0.988\pm0.002$ & $0.986\pm0.002$ \\
+TAMR-DTI & \textbf{$0.964\pm0.001$} & \textbf{$0.954\pm0.002$} & \textbf{$0.930\pm0.002$} & \textbf{$0.935\pm0.002$} & \textbf{$0.982\pm0.002$} & \textbf{$0.978\pm0.002$} & \textbf{$0.992\pm0.001$} & \textbf{$0.991\pm0.001$} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{TAMR-DTI repeated-run summary across the four benchmark datasets. Values are mean $\pm$ standard deviation over seeds 42, 43, 44, 45, and 46.}
+\label{tab:si_tamr_main_summary}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccc}
+\toprule
+Dataset & AUROC & AUPRC & Acc@0.5 & F1@0.5 \\
+\midrule
+BindingDB & \textbf{$0.964\pm0.001$} & \textbf{$0.954\pm0.002$} & \textbf{$0.909\pm0.003$} & \textbf{$0.891\pm0.004$} \\
+BioSNAP & \textbf{$0.930\pm0.002$} & \textbf{$0.935\pm0.002$} & \textbf{$0.857\pm0.004$} & \textbf{$0.859\pm0.004$} \\
+Human & \textbf{$0.982\pm0.002$} & \textbf{$0.978\pm0.002$} & \textbf{$0.930\pm0.009$} & \textbf{$0.924\pm0.009$} \\
+C. elegans & \textbf{$0.992\pm0.001$} & \textbf{$0.991\pm0.001$} & \textbf{$0.961\pm0.004$} & \textbf{$0.961\pm0.004$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Single-seed diagnostic ablation results on BioSNAP. All variants use seed 42, the same split, validation-AUROC checkpoint selection, and fixed-threshold Acc@0.5/F1@0.5.}
+\label{tab:si_biosnap_ablation}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+Variant & AUROC & AUPRC & Acc@0.5 & F1@0.5 \\
+\midrule
+Full TAMR-DTI & \textbf{0.933} & \textbf{0.937} & \textbf{0.862} & \textbf{0.864} \\
+w/o Target-aware conformer & 0.916 & 0.922 & 0.844 & 0.845 \\
+w/o Protein FiLM & 0.920 & 0.924 & 0.842 & 0.844 \\
+w/o Protein Mamba refinement & 0.918 & 0.925 & 0.842 & 0.845 \\
+w/o Bidirectional modulation & 0.920 & 0.926 & 0.848 & 0.849 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
+\begin{table}[!htbp]
+\centering
+\caption{Single-seed conformer-count comparison on BioSNAP. Conformers are energy-sorted during preprocessing; $n=1$ keeps the lowest-energy conformer only, while larger $n$ values expose additional geometries.}
+\label{tab:si_biosnap_conformer_comparison}
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccrrrrr}
+\toprule
+Variant & Effective conformers & Aggregation & Best epoch & AUROC & AUPRC & Acc@0.5 & F1@0.5 \\
+\midrule
+$n=1$ target-aware & 1 & Target-aware & 46 & 0.9277 & 0.9297 & 0.8578 & 0.8591 \\
+$n=2$ target-aware & 2 & Target-aware & 68 & 0.9300 & 0.9322 & 0.8575 & 0.8605 \\
+$n=4$ target-aware & 4 & Target-aware & 46 & 0.9297 & 0.9345 & 0.8524 & 0.8542 \\
+$n=8$ target-aware & 8 & Target-aware & 51 & \textbf{0.9322} & \textbf{0.9356} & 0.8575 & 0.8624 \\
+$n=16$ target-aware & 16 & Target-aware & 62 & 0.9312 & 0.9326 & \textbf{0.8631} & \textbf{0.8668} \\
+$n=8$ uniform average & 8 & Uniform average & 64 & 0.9308 & 0.9340 & 0.8589 & 0.8616 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\FloatBarrier

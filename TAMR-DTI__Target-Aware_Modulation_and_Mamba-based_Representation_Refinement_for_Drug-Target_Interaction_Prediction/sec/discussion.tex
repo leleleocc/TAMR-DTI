@@ -1,51 +1,46 @@
 \section{Discussion}
 
-The main results suggest that TAMR-DTI is most useful when the prediction task
-benefits from pair-specific representation learning. Rather than treating the
-drug and protein as two fixed encodings that are fused only at the end, the
-model lets the protein context influence conformer aggregation and lets the
-drug context condition protein encoding before final interaction prediction.
-This design matches the structure of DTI prediction: the same ligand can expose
-different useful geometric views for different targets, and the same protein
-sequence can carry different interaction evidence depending on the ligand. The
-benchmark results therefore support the value of target-aware modulation, while
-the threshold-dependent metrics remind us that ranking quality and calibrated
-decision behavior are not the same problem.
+The main results suggest that TAMR-DTI is most useful when the prediction task benefits from pair-specific
+representation learning. Instead of treating the drug and protein as two fixed encodings that are fused only
+at the end, the model lets the protein context influence conformer aggregation and lets the drug context
+condition protein encoding before final interaction prediction. This design matches the structure of DTI
+prediction: the same ligand can expose different useful geometric views for different targets, and the same
+protein sequence can carry different interaction evidence depending on the ligand. The benchmark results
+therefore support the value of target-aware modulation, while the threshold-dependent metrics remind us that
+ranking quality and calibrated decision behavior are related but distinct goals.
 
-The conformer-count analysis should be read in this light. It does not imply
-that adding more conformers will always improve performance. Conformers are
-computationally generated geometric hypotheses, and later conformer slots may
-include less relevant or noisier geometries. The useful point is narrower:
-binding prediction can benefit from exposing multiple plausible molecular
-geometries, provided that the model has a target-conditioned mechanism for
-weighting them. This is why the conformer branch is better viewed as a
-protein-guided geometry aggregation module than as a simple multi-conformer
-augmentation trick.
+The conformer-count analysis should be read in this light. It does not imply that adding more conformers will
+always improve performance. Conformers are computationally generated geometric hypotheses, and later
+conformer slots may include less relevant or noisier geometries. The useful point is narrower: binding
+prediction can benefit from exposing multiple plausible molecular geometries when the model also has a
+target-conditioned mechanism for weighting them. This is why the conformer branch is better viewed as a
+protein-guided geometry aggregation module than as a simple multi-conformer augmentation trick.
 
-The protein-side refinement modules play a complementary role. FiLM modulation
-injects ligand information into protein feature extraction, while the Mamba
-block refines the ordered protein-token stream before cross-modal matching.
-TAMR-DTI deliberately keeps attention-based interaction modeling in the final
-fusion stage, because DTI prediction still requires explicit drug-protein
-alignment. Mamba is therefore used as a controlled residual refinement on the
-protein side, not as a wholesale replacement for cross-modal attention. The
-ablation results are the main evidence for this design choice. The retained
-interpretability analysis complements this picture from the geometry side by
-showing that conformer usage is sample-specific across all \InterpNumSamples{}
-BioSNAP test pairs, with the lowest-entropy conformer selections showing a
-higher error rate than the highest-entropy selections. These visualizations
-should still be read as model-internal evidence rather than as direct
-structural validation.
+The protein-side refinement modules play a complementary role. FiLM modulation injects ligand information
+into protein feature extraction, while the Mamba block refines the ordered protein-token stream before
+cross-modal matching. TAMR-DTI deliberately keeps attention-based interaction modeling in the final fusion
+stage, because DTI prediction still requires explicit drug-protein alignment. Mamba is therefore used as a
+controlled residual refinement on the protein side, not as a wholesale replacement for cross-modal attention.
+The ablation results are the main evidence for this design choice. The retained interpretability analysis
+complements this picture from the geometry side by showing that conformer usage is sample-specific across all
+\InterpNumSamples{} BioSNAP test pairs, with the lowest-entropy conformer selections showing a higher error
+rate than the highest-entropy selections. These visualizations should still be read as model-internal evidence
+rather than as direct structural validation.
 
-Several limitations remain. The reported baselines come from the literature and
-do not provide a fully matched paired-testing protocol. The ablation and
-conformer-count studies are single-seed diagnostics on BioSNAP, so they support
-mechanistic interpretation but should not be treated as formal significance
-tests. The generated conformers are not experimentally resolved binding poses,
-and the current random-split benchmarks do not fully test scaffold-level or
-target-family generalization. The interpretability analysis is also limited to
-model-internal conformer-weight behavior and does not validate the generated
-conformers as experimental binding poses. Future work should therefore use
-matched multi-seed ablations, harder out-of-distribution splits,
-calibration-aware threshold selection, and stronger structural supervision when
-reliable binding-pose information is available.
+Several limitations remain. The reported baselines come from the literature and do not provide a fully matched
+paired-testing protocol. The ablation and conformer-count studies are single-seed diagnostics on BioSNAP, so
+they support mechanistic interpretation but should not be treated as formal significance tests. The generated
+conformers are not experimentally resolved binding poses, and the current random-split benchmarks do not
+fully test scaffold-level or target-family generalization. Consequently, these experiments evaluate
+within-dataset prediction rather than cold-drug, cold-target, scaffold-level, or cross-organism transfer. The
+interpretability analysis is also limited to model-internal conformer-weight behavior and does not validate the
+generated conformers as experimental binding poses.
+
+Future work should therefore use matched multi-seed ablations, harder out-of-distribution splits,
+calibration-aware threshold selection, and stronger structural supervision when reliable binding-pose
+information is available. Another practical direction is to improve the generation of multi-conformer
+features themselves. Rather than relying only on a fixed energy-sorted conformer cache, future variants could
+use more diverse conformer sampling, better energy- or uncertainty-aware conformer scoring, and
+target-conditioned preselection or refinement of candidate geometries before aggregation. Such improvements
+would keep the target-aware weighting idea intact while reducing the noise introduced by irrelevant or
+low-quality generated conformers.

@@ -1,43 +1,33 @@
 \section{Conclusion}
 
-We presented TAMR-DTI, a multimodal DTI framework that represents drug-target
-pairs through target-aware modulation and protein-side Mamba refinement. The
-model addresses two limitations of fixed multimodal encoding: a ligand should
-not be forced into the same conformer summary for every target, and long-range
-protein refinement should not remove the explicit interaction modeling needed
-for DTI prediction. TAMR-DTI therefore lets protein context reweight molecular
-conformers, lets ligand context modulate protein tokens, and applies a gated
-Mamba residual block only to the ordered protein sequence before BiIntention
-cross-modal matching.
+This work presented TAMR-DTI, a multimodal DTI framework that represents drug-target pairs through
+target-aware conformer modulation, ligand-conditioned protein encoding, protein-side Mamba refinement,
+and BiIntention-based interaction matching. Across five repeated runs, the model achieves the strongest
+reported AUROC/AUPRC values on all four benchmark datasets considered in this study: 0.964/0.954 on
+BindingDB, 0.930/0.935 on BioSNAP, 0.982/0.978 on Human, and 0.992/0.991 on C. elegans. These results
+show that the proposed representation path improves the primary ranking objective for DTI prediction across
+datasets with different sizes, label ratios, and organism sources.
 
-Across five repeated runs on four benchmark datasets, TAMR-DTI improves AUROC
-and AUPRC on BindingDB, BioSNAP, Human, and C. elegans, with the
-strongest improvement on BioSNAP. The Human benchmark still prevents a claim of
-uniform superiority because its fixed-threshold scores remain weaker and more
-variable than its ranking metrics. The BioSNAP ablation, conformer-count
-comparison, and conformer-weight interpretability analysis nevertheless provide
-consistent mechanism-level evidence: target-aware conformer aggregation
-improves ranking quality and produces sample-specific conformer usage, while
-the ablation results indicate that ligand-conditioned protein modulation and
-protein-side Mamba refinement also contribute to the final prediction.
+The diagnostic results further clarify where the gains come from. On BioSNAP, removing target-aware
+conformer aggregation lowers AUROC from 0.933 to 0.916, while removing ligand-conditioned protein FiLM
+or protein-side Mamba refinement also reduces both ranking and fixed-threshold performance. The conformer-
+count comparison shows that the eight-conformer target-aware variant reaches the best ranking scores among
+the tested geometry settings (0.9322 AUROC and 0.9356 AUPRC), and the conformer-weight analysis shows
+non-uniform, sample-specific conformer usage over the held-out test pairs. Together, these findings support
+the central design conclusion: ligand geometry should be treated as pair-level evidence conditioned on the
+protein context, while long-range protein refinement should complement rather than replace explicit drug-
+target matching.
 
-Overall, TAMR-DTI shows that pair-specific molecular geometry and protein-only
-sequence refinement can be integrated without discarding explicit drug-target
-matching. The resulting model is best viewed as a competitive, dataset-dependent
-extension of a strong multimodal DTI backbone. Future work should strengthen the
-evidence with matched multi-seed ablations, harder generalization splits, and
-more direct structural supervision for conformer selection.
-
-\subsubsection*{Data Availability}
-The code for TAMR-DTI is publicly available at
-\url{https://github.com/leleleocc/TAMR-DTI}. The benchmark datasets used in this
-study are publicly available: BindingDB (\url{https://www.bindingdb.org/rwd/bind/index.jsp}),
-BioSNAP from the Stanford SNAP BioData collection
-(\url{https://snap.stanford.edu/biodata/datasets/10002/10002-ChG-Miner.html}),
-and the Human and C. elegans benchmark files
-(\texttt{human\_data.txt} and \texttt{celegans\_data.txt}) from the TransformerCPI
-repository
-(\url{https://github.com/lifanchen-simm/transformerCPI/tree/master/Human%2CC.elegans/dataset}).
-
-\subsubsection*{Acknowledgments}
-Omitted for anonymous review.
+The broader significance is that DTI models can move beyond independently encoded drug and protein
+descriptors toward pair-specific representation construction. More concretely, TAMR-DTI provides a
+practical way to select and aggregate generated ligand conformers according to the target, feed the resulting
+ligand context back into protein representation learning, refine the ordered protein sequence with an
+efficient state-space block, and retain an explicit bidirectional interaction module for prediction. This gives
+future DTI systems a modular template for combining molecular geometry, protein sequence context, and
+interpretable pairwise matching. In practical drug-discovery workflows, such a model can help prioritize
+compound-target pairs for downstream validation, narrow the candidate space before costly biochemical
+assays, and provide model-internal conformer-usage evidence for why a ligand may be more plausible for one
+target than another, while still requiring experimental validation before biological or clinical use. The
+current evidence is strongest for ranking performance; future work should strengthen the conclusion with
+matched multi-seed ablations, harder generalization splits, and more direct structural supervision for conformer
+selection.
