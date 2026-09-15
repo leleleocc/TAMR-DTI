@@ -1,0 +1,17 @@
+model/
+outputs/*
+!outputs/interpretability/
+outputs/interpretability/**/*.pt
+/data/
+cache/
+.cursor/
+.DS_Store
+__pycache__/
+*.tar.xz
+token
+causal-conv1d-1.6.1.post4
+causal-conv1d-1.6.1.post4.zip
+mamba-2.2.2
+mamba-2.2.2.zip
+submit/*
+TAMR-DTI__Target-Aware_Modulation_and_Mamba-based_Representation_Refinement_for_Drug-Target_Interaction_Prediction/*

@@ -1,0 +1,137 @@
+# Stage 2 interpretability variant: collapse-fix on BioSNAP random split, seed 42,
+# using the geo_v2 per-atom local geometry 3D cache.
+#
+# Purpose:
+#   This is the geo_v2 upgrade of stage2_interp_collapse_fix_biosnap_seed42.yaml.
+#   The main experiment (stage2_main_06_full_tamr_dti_n8_biosnap_seed42) is NOT
+#   affected; this config uses a separate 3D feature cache
+#   (drug3d_features_geo_v2.pt) and a separate output_dir. All four
+#   collapse-avoidance switches are enabled:
+#
+#     D2  drug3d cache variant with **per-atom** SE(3)-invariant geometry
+#         descriptors so feature[k, i] varies across BOTH conformer K and
+#         atom i on the geo block (dist_to_COM / local density / nn1+RBFs /
+#         triplet angles / planarity / gyration contribution, 12 dims/atom).
+#         Fixes the residual atom-axis collapse in geo_v1 where the same 10
+#         geometry values were broadcast to every atom of a conformer.
+#     M1  score MLP input mode = no_protein
+#         removes the 128-dim zero-variance subspace (protein_global
+#         broadcast across K) from the score input.
+#     M2  dedicated optimizer param group for drug_encoding.score.*
+#         weight_decay=0 (no adversarial shrinkage), lr multiplier 5x.
+#     M3  conformer-diversity auxiliary loss
+#         UFF-energy margin-ranking + weak negative entropy toward
+#         non-uniform.
+#
+# Runtime:
+#   1. Build the geometry cache once (per split):
+#        python scripts/pre_extract.py \
+#            --data datasets/biosnap --split random \
+#            --output_dir cache/features \
+#            --drug3d_feature_variant geo_v2
+#   2. Sanity-check the cache (extends V1 checks with per-atom-variance):
+#        python scripts/verify_drug3d_cache_variants.py \
+#            --vanilla cache/features/datasets/biosnap/random/drug3d_features.pt \
+#            --geo_v1  cache/features/datasets/biosnap/random/drug3d_features_geo_v1.pt \
+#            --geo_v2  cache/features/datasets/biosnap/random/drug3d_features_geo_v2.pt
+#   3. Train:
+#        deepspeed --num_gpus=<n> src/core/main_ds.py \
+#            --data datasets/biosnap --split random \
+#            --cache_root cache/features \
+#            --cfg configs/experiments/stage2_interp_collapse_fix_biosnap_seed42_geo_v2.yaml \
+#            --save_dir outputs/interp/stage2_collapse_fix_biosnap_seed42_geo_v2
+#   4. Analyze the trained checkpoint with
+#        scripts/verify_conf_weight_no_collapse.py
+#      to confirm conf_weight no longer collapses to 1/K, the score MLP
+#      has non-trivial weight std, and the learned weights track UFF energy.
+
+DRUG:
+  NODE_IN_FEATS: 75
+  PADDING: true
+  HIDDEN_LAYERS: [128, 128, 128]
+  NODE_IN_EMBEDDING: 128
+  MAX_NODES: 290
+  NUM_CONFORMERS: 8
+  CONFORMER_ATOMS: 64
+  USE_TARGET_AWARE_CONF: true
+  FUSION_GATE_BIAS: -2.0
+  # D2: switch to the geo_v2 per-atom local geometry cache
+  # (74 vanilla + 12 per-atom geometry dims per atom).
+  DRUG3D_FEATURE_VARIANT: geo_v2
+  # M1: score MLP input drops the zero-variance protein_global broadcast.
+  CONF_SCORE_INPUT_MODE: no_protein
+
+PROTEIN:
+  NUM_FILTERS: [128, 128, 128]
+  KERNEL_SIZE: [3, 6, 9]
+  EMBEDDING_DIM: 128
+  NUM_HEAD: 8
+  MAX_LEN: 128
+  PADDING: true
+  USE_LIGAND_FILM: true
+  FILM_SCALE: 0.05
+
+CROSSINTENTION:
+  LAYER: 1
+  NUM_HEAD: 8
+  EMBEDDING_DIM: 128
+  # Match the main experiment so interpretability results transfer.
+  FUSION_MODE: protein_mamba_biintention
+  USE_INTERACTION_FIELD: false
+  FIELD_ENHANCE_GATE_BIAS: -2.0
+  MAMBA_D_STATE: 16
+  MAMBA_D_CONV: 4
+  MAMBA_EXPAND: 2
+  MAMBA_BIDIRECTIONAL: true
+  MAMBA_DROPOUT: 0.1
+  MAMBA_ENHANCE_GATE_BIAS: -2.0
+  MAMBA_USE_FAST_PATH: false
+  MAMBA_BACKEND: mamba1
+  # Counterfactual head unchanged from main.
+  CF_START_EPOCH: 30
+  CF_TOP_RATIO: 0.15
+  CF_MARGIN: 0.1
+  CF_KEY_WEIGHT: 0.0
+  CF_STABLE_WEIGHT: 0.0
+  FIELD_ENTROPY_WEIGHT: 0.0
+
+DECODER:
+  NAME: MLP
+  IN_DIM: 256
+  HIDDEN_DIM: 256
+  OUT_DIM: 128
+  BINARY: 1
+
+SOLVER:
+  MAX_EPOCH: 100
+  BATCH_SIZE: 16
+  NUM_WORKERS: 8
+  LR: 0.0001
+  USE_LD: true
+  LR_DECAY: 0.5
+  DECAY_INTERVAL: 25
+  LR_SCHEDULER: plateau
+  LR_PATIENCE: 5
+  MIN_LR: 0.000001
+  WEIGHT_DECAY: 0.0001
+  USE_POS_WEIGHT: true
+  POS_WEIGHT: 0.0
+  EARLY_STOP_PATIENCE: 10
+  BEST_METRIC: auroc
+  MIN_DELTA: 0.0001
+  SEED: 42
+
+  # M2: dedicated optimizer param group for drug_encoding.score.*
+  CONF_SCORE_PARAM_GROUP: true
+  CONF_SCORE_WEIGHT_DECAY: 0.0
+  CONF_SCORE_LR_MULT: 5.0
+
+  # M3: conformer-diversity auxiliary loss (opt-in).
+  CONF_DIVERSITY_RANK_WEIGHT: 0.05
+  CONF_DIVERSITY_RANK_MARGIN: 0.05
+  CONF_DIVERSITY_ENTROPY_WEIGHT: 0.001
+
+RESULT:
+  # Separate output tree so this variant never overwrites the main run or the geo_v1 run.
+  OUTPUT_DIR: outputs/interp/
+  SAVE_MODEL: true

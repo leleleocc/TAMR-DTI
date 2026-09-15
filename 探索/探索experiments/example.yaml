@@ -1,0 +1,158 @@
+# 正式实验配置模板。
+# 用法:
+#   1. 复制本文件为一个新的实验配置，例如:
+#      configs/experiments/formal_e1_bimod_biintention_bindingdb_random.yaml
+#   2. 修改配置值，并让文件名和 --swanlab_experiment 保持对应。
+#   3. 正式实验不要临时依赖命令行覆盖超参数，优先通过 yaml 固化配置。
+
+# Drug 分支配置: 1D ChemBERTa token、2D GCN、3D 多构象 EGNN。
+DRUG:
+  # 2D DGL 图节点输入维度，当前是 74 维原子特征 + 1 维 virtual node 标记。
+  NODE_IN_FEATS: 75
+  # true 表示 MolecularGCN 输入投影层忽略 padding/virtual node 的语义贡献。
+  PADDING: true
+  # 2D GCN hidden 维度。层数和宽度越大，容量越强，也更容易过拟合。
+  HIDDEN_LAYERS: [128, 128, 128]
+  # 2D 原子特征投影维度，需要和 CROSSINTENTION.EMBEDDING_DIM 对齐。
+  NODE_IN_EMBEDDING: 128
+  # 每个分子图补齐到的最大节点数，需和缓存/dataloader 约定一致。
+  MAX_NODES: 290
+  # 每个药物使用的 3D 构象数。做 n 构象对比时主要改这里，并同步缓存。
+  NUM_CONFORMERS: 8
+  # 每个构象池化/补齐后的 3D atom token 数。
+  CONFORMER_ATOMS: 64
+  # true 表示用蛋白上下文动态选择/加权药物构象，是第一创新点的一部分。
+  USE_TARGET_AWARE_CONF: true
+  # 1D ChemBERTa 与 2D/3D 几何分支融合门 bias。sigmoid(-2.0) 约等于 0.12。
+  # 值越小，初始越偏向 2D/3D 几何分支。
+  FUSION_GATE_BIAS: -2.0
+
+# Protein 分支配置: ProtBERT token 投影 + ProteinACmix + 可选 ligand-conditioned 调制。
+PROTEIN:
+  # 旧 CNN 配置，当前主流程基本不直接读取，保留用于兼容。
+  NUM_FILTERS: [128, 128, 128]
+  # 旧多尺度卷积核配置，当前 ProteinACmix 构造处固定 conv_kernel_size=3。
+  KERNEL_SIZE: [3, 6, 9]
+  # ProtBERT 1024 维投影后的 token 维度，需和 CROSSINTENTION.EMBEDDING_DIM 对齐。
+  EMBEDDING_DIM: 128
+  # 旧蛋白注意力头数配置，当前构造处固定 num_attention_heads=8。
+  NUM_HEAD: 8
+  # 蛋白 token 最大长度。当前预处理/缓存输出按该长度进入融合模块。
+  MAX_LEN: 128
+  # 旧 padding 开关，实际有效位主要由 protein_mask 控制。
+  PADDING: true
+  # true 表示使用药物上下文对蛋白编码器做条件调制，是第一创新点的一部分。
+  USE_LIGAND_FILM: true
+  # 调制强度。过大可能扰乱 ProtBERT 表征，过小则贡献不明显。
+  FILM_SCALE: 0.05
+
+# Drug-protein 融合与反事实正则配置。
+CROSSINTENTION:
+  # 融合层数。BiIntention 中生效，部分 fusion 变体可能不直接使用。
+  LAYER: 1
+  # 融合模块注意力头数。
+  NUM_HEAD: 8
+  # 融合模块内部维度，需和 drug/protein token 维度一致。
+  EMBEDDING_DIM: 128
+  # 融合模式:
+  #   biintention       - 原稳定主干，用于 E1 第一创新点验证。
+  #   interaction_field - 显式 interaction field 替代主干，作为对照。
+  #   field_enhanced_bi - BiIntention + field residual，作为对照。
+  #   mamba             - MambaFusion，第二创新点候选。
+  #   mamba_enhanced_bi - BiIntention + Mamba residual，低成本测试 Mamba 是否能辅助主干。
+  #   protein_mamba_biintention - 仅在蛋白 token 上加入 Mamba residual，再进入 BiIntention。
+  #   protein_mamba_direct_gate_biintention - 用 drug/protein 全局匹配信息动态控制 protein-Mamba 注入强度。
+  FUSION_MODE: biintention
+  # 旧布尔开关，仅用于兼容老配置；新实验优先使用 FUSION_MODE。
+  USE_INTERACTION_FIELD: false
+  # FieldEnhancedBiIntention 的 residual gate 初始 bias；仅 field_enhanced_bi 时主要生效。
+  FIELD_ENHANCE_GATE_BIAS: -2.0
+  # MambaFusion 参数；仅 FUSION_MODE=mamba 时主要生效。
+  MAMBA_D_STATE: 16
+  MAMBA_D_CONV: 4
+  MAMBA_EXPAND: 2
+  MAMBA_BIDIRECTIONAL: true
+  MAMBA_DROPOUT: 0.1
+  # Mamba residual gate 初始 bias；mamba_enhanced_bi / protein_mamba_biintention 时主要生效。
+  MAMBA_ENHANCE_GATE_BIAS: -2.0
+  # Direct gate 的 MLP 隐层维度；最后一层零初始化，初始 gate 等价于上面的 bias。
+  MAMBA_GATE_HIDDEN_DIM: 128
+  # Direct gate 动态偏移强度；bounded=true 时表示 logit 偏移上限。
+  MAMBA_GATE_DELTA_SCALE: 1.0
+  # 是否阻断 gate 输入对 drug/protein 编码器的反向梯度。
+  MAMBA_GATE_DETACH_CONTEXT: false
+  # 是否将 gate MLP 输出限制为 delta_scale * tanh(delta)。
+  MAMBA_GATE_BOUNDED: false
+  # 当前环境下建议 false，避免 mamba/causal-conv1d fast path 兼容问题。
+  MAMBA_USE_FAST_PATH: false
+  # 当前 P100 / sm60 环境建议 mamba1，避免 Mamba2 Triton backward 架构限制。
+  MAMBA_BACKEND: mamba1
+  # 从第几轮开始加入反事实一致性损失。过早可能压制主任务收敛。
+  CF_START_EPOCH: 30
+  # 反事实遮蔽 top 关键 protein token 的比例。
+  CF_TOP_RATIO: 0.15
+  # 关键区域遮蔽后要求分数下降的 margin。
+  CF_MARGIN: 0.1
+  # 关键区域遮蔽损失权重。
+  CF_KEY_WEIGHT: 0.02
+  # 非关键区域遮蔽稳定性损失权重。
+  CF_STABLE_WEIGHT: 0.01
+  # interaction field 熵正则权重。一般保持 0，除非专门做 field 平滑实验。
+  FIELD_ENTROPY_WEIGHT: 0.0
+
+# 分类头配置。
+DECODER:
+  # 当前代码固定使用 MLPDecoder，该字段主要用于记录。
+  NAME: MLP
+  # 融合后输入维度，通常是 drug pooled 128 + protein pooled 128。
+  IN_DIM: 256
+  # MLP hidden 维度。
+  HIDDEN_DIM: 256
+  # MLP 倒数第二层输出维度。
+  OUT_DIM: 128
+  # 二分类 BCEWithLogitsLoss 使用 1 个 logit。
+  BINARY: 1
+
+# 训练超参数。正式实验应通过本配置固定，不建议临时命令行覆盖。
+SOLVER:
+  # 最大训练轮数；实际可能被 early stopping 提前终止。
+  MAX_EPOCH: 100
+  # 每张 GPU 的 micro batch size。有效 batch 还会乘以 GPU 数和 grad accumulation。
+  BATCH_SIZE: 16
+  # DataLoader worker 数。
+  NUM_WORKERS: 8
+  # 初始学习率。
+  LR: 0.0001
+  # 旧开关，当前训练主流程基本不直接读取，保留兼容。
+  USE_LD: true
+  # plateau 调度触发时学习率乘以该系数。
+  LR_DECAY: 0.5
+  # 旧固定间隔衰减配置；当前 plateau 调度不直接使用。
+  DECAY_INTERVAL: 25
+  # 学习率调度策略；当前训练代码实现 plateau。
+  LR_SCHEDULER: plateau
+  # 验证集指标连续多少轮无提升后降低学习率。
+  LR_PATIENCE: 5
+  # 学习率下限。
+  MIN_LR: 0.000001
+  # Adam weight decay。
+  WEIGHT_DECAY: 0.0001
+  # true 表示按训练集正负样本比例设置 BCE pos_weight。
+  USE_POS_WEIGHT: true
+  # <=0 时自动由训练集计算；=1.0 基本等价于不重加权。
+  POS_WEIGHT: 0.0
+  # 验证集指标连续多少轮无提升后早停。
+  EARLY_STOP_PATIENCE: 10
+  # 用验证集哪个指标选 best checkpoint。论文排序能力可用 auc/aupr，当前对齐 v0 用 acc。
+  BEST_METRIC: acc
+  # 判断 BEST_METRIC 有效提升的最小增量。
+  MIN_DELTA: 0.0001
+  # 随机种子。
+  SEED: 42
+
+# 输出配置。
+RESULT:
+  # 默认输出根目录；正式实验通常还会通过 --save_dir 显式指定到具体实验目录。
+  OUTPUT_DIR: outputs/result/
+  # DeepSpeed 流程会保存 checkpoint。
+  SAVE_MODEL: true
